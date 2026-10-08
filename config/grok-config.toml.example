@@ -1,8 +1,8 @@
-# Trecho para ~/.grok/config.toml, igual ao Grok configurado no PC de referencia.
-# Mescle com o que ja existe; nao substitua o arquivo inteiro.
+# Snippet for ~/.grok/config.toml, same as the Grok configured on the reference PC.
+# Merge it with what is already there; do not replace the whole file.
 
 [ui]
-# "auto" pede confirmacao so para acoes arriscadas. Use "default" para confirmar tudo.
+# "auto" asks for confirmation only for risky actions. Use "default" to confirm everything.
 permission_mode = "auto"
 yolo = false
 compact_mode = false
@@ -11,9 +11,9 @@ fork_secondary_model = "grok-4.6"
 
 [models]
 default = "grok-4.6"
-default_reasoning_effort = "xhigh"   # "high" economiza tokens se o Grok estiver so como worker
+default_reasoning_effort = "xhigh"   # "high" saves tokens if Grok is only a worker
 
-# As regras em ~/.grok/rules/*.md ja carregam em todo projeto, sem configurar nada.
-# Se quiser guardar as regras da equipe em outra pasta:
+# The rules in ~/.grok/rules/*.md already load in every project, no setup needed.
+# If you want to keep the team rules in another folder:
 # [paths]
 # extra_rule_dirs = ["~/orca-skills/config"]

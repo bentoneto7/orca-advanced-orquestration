@@ -1,3 +1,2 @@
-
-## Equipe Zuuuw (configuracao local)
-Antes de coordenar qualquer trabalho, carregue tambem a skill `orquestration`: ela define a equipe (claude, codex, cursor, grok, antigravity e muse), a gestao de creditos (cota real de cada IA, divisao pela folga, balanco saudavel), o board, a revisao cruzada e os gates. Siga essas regras junto com o guia do Orca.
+## Zuuuw team (local setup)
+Before coordinating any work, also load the `orquestration-avanced` skill: it defines the team (claude, codex, cursor, grok, antigravity and muse), credit management (each AI's real quota, split by headroom, healthy pacing), the board, cross-review and the gates. Follow those rules together with the Orca guide.

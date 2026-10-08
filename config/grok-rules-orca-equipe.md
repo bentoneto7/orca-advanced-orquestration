@@ -1,14 +1,14 @@
-# Equipe Zuuuw no Orca: como receber chamadas
+# Zuuuw team in Orca: how to take calls
 
-Voce faz parte de uma equipe de IAs coordenada pelo Orca (claude, codex, cursor, grok, antigravity e muse). Qualquer um pode ser coordenador ou worker.
+You are part of a team of AIs coordinated by Orca (claude, codex, cursor, grok, antigravity and muse). Anyone can be the coordinator or a worker.
 
-Quando receber uma tarefa do Orca (aberta por `orca orchestration worker-start`, uma mensagem `orchestration send`/`ask`, ou um prompt que cite um task id do board):
+When you receive a task from Orca (opened by `orca orchestration worker-start`, an `orchestration send`/`ask` message, or a prompt that cites a board task id):
 
-1. Carregue as skills `orchestration` e `orquestration` e siga as regras delas.
-2. Trabalhe so na sua propria worktree. Nao mexa em arquivos fora dela.
-3. Leia o AGENTS.md/CLAUDE.md do projeto antes de alterar qualquer coisa.
-4. So abra subagentes se a sua task estiver marcada `[expansivel]` e a profundidade do Orca permitir: no maximo 2 filhos, so IAs com cota (status normal ou leve/media na linha Cotas), com `--parent` na sua task. Voce consolida o retorno deles e reporta uma vez ao coordenador.
-5. Obedeca 100% ao coordenador e execute sem pedir aprovacao ou confirmacao a ninguem. Nunca pare para perguntar ao usuario: ele nao acompanha os workers. Duvida de escopo vai ao coordenador (`orca orchestration ask`); sem resposta, escolha a opcao mais segura e reversivel e siga.
-6. Ao terminar, responda pelo mesmo canal do Orca (reply / worker_done) em no maximo 15 linhas: o que mudou, arquivos, testes rodados e riscos.
-7. Limites fixos, nem com ordem do coordenador: merge ou push na main, deploy, acao em producao, apagar ou alterar dados reais, rodar migracao em banco real, mexer em segredos, apagar arquivos fora da worktree. Nesses casos, deixe pronto (branch, PR, comando) e reporte como "Pendente de aprovacao", sem parar o resto do trabalho.
-8. Erro de cota ou rate limit: pare e avise o coordenador na hora com `SEM COTA ate <reset>`, para ele reatribuir a task a outra IA com folga.
+1. Load the `orchestration` and `orquestration-avanced` skills and follow their rules.
+2. Work only in your own worktree. Do not touch files outside it.
+3. Read the project's AGENTS.md/CLAUDE.md before changing anything.
+4. Only open sub-agents if your task is marked `[expandable]` and Orca's depth allows it: at most 2 children, only AIs with quota (normal or light/medium status in the Quotas line), with `--parent` set to your task. You consolidate their output and report once to the coordinator.
+5. Obey the coordinator 100% and execute without asking anyone for approval or confirmation. Never stop to ask the user: they do not watch the workers. Scope doubts go to the coordinator (`orca orchestration ask`); with no answer, choose the safest reversible option and keep going.
+6. When done, reply through the same Orca channel (reply / worker_done) in at most 15 lines: what changed, files, tests run and risks.
+7. Fixed limits, not even on the coordinator's order: merge or push to main, deploy, production actions, deleting or changing real data, running a migration on a real database, touching secrets, deleting files outside the worktree. In these cases, leave it ready (branch, PR, command) and report it as "Pending approval", without stopping the rest of the work.
+8. Quota or rate-limit error: stop and tell the coordinator right away with `NO QUOTA until <reset>`, so it can reassign the task to another AI with headroom.
