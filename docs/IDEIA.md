@@ -29,7 +29,7 @@ Os pilares da ideia:
 
 1. **Paralelismo.** Até 6 workers ao mesmo tempo, cada um na própria git worktree. Com **Nested worker depth = 2**, um worker com tarefa grande ainda pode abrir até 2 subagentes de apoio.
 2. **Claude e Codex como dupla principal.** O trabalho pesado fica com quem dos dois tiver mais folga. Cursor, Grok e Muse pegam partes reais de implementação, não só sobras.
-3. **Autonomia total com travas fixas.** Você não precisa acompanhar os subagentes: todos rodam sem pedir aprovação e obedecem ao coordenador. O que é arriscado fica pronto e vai para "Pendente de aprovação" (veja [Travas de segurança](#travas-de-segurança-autonomia-total-com-travas-fixas)).
+3. **Desbloqueio total com travas fixas.** As IAs rodam sem pedir aprovação, obedecem ao coordenador e, com o Chrome desbloqueado, agem no navegador sozinhas. O que é arriscado fica pronto e vai para "Pendente de aprovação" (veja [Desbloqueio total, com travas fixas](#desbloqueio-total-com-travas-fixas)).
 4. **Revisão cruzada.** O trabalho de uma IA é revisado por uma IA de outro fornecedor.
 5. **Gestão de créditos.** A divisão segue a cota real de cada IA e o ritmo de gasto, para nenhuma esgotar antes do reset.
 6. **Economia de tokens.** Handoffs curtos, regras compactas e nada de reler arquivos grandes.
@@ -88,7 +88,7 @@ Print real da janela do Orca, recortado para mostrar só a estrutura. Cada task 
 - **Sem ponto único de falha.** Se uma IA bate o limite, cai o login ou trava, a tarefa passa na hora para a próxima com folga. O trabalho continua.
 - **Menos viés.** Quem revisa é de outro fornecedor, treinado de outro jeito. Erros que passariam despercebidos pela mesma IA que escreveu têm mais chance de aparecer.
 - **Forças combinadas.** Cada IA faz o que faz melhor: Codex e Claude no pesado, Cursor na interface, Grok na pesquisa e na crítica, Antigravity na leitura ampla do código, Muse nas partes fechadas.
-- **Autonomia.** Ninguém para esperando você aprovar passo de rotina. Você só decide o que realmente importa: merge, deploy, produção e dados reais.
+- **Desbloqueio.** Ninguém para esperando você aprovar passo de rotina ou clique no Chrome. Você só decide o que realmente importa: merge, deploy, produção e dados reais.
 
 > **Exemplo (ilustrativo):** numa feature com front-end, back-end e testes, uma IA sozinha faria pesquisa, back-end, front-end, testes e revisão em sequência. Na equipe, o Antigravity mapeia o código e o Grok pesquisa ao mesmo tempo. Depois o Codex faz o back-end enquanto o Cursor faz a interface, e cada um revisa o trabalho do outro.
 
@@ -114,16 +114,16 @@ Leitura real feita no PC em 08/10, às 19:08. Repare que ela confirma a ideia: o
 
 ![Saída real do cotas.mjs e do Orca](img/print-cotas.png)
 
-## Travas de segurança: autonomia total, com travas fixas
+## Desbloqueio total, com travas fixas
 
 > [!IMPORTANT]
-> As IAs executam tudo sozinhas, sem pedir aprovação a ninguém. Só que existem **7 travas fixas** que nenhuma IA executa, nem com ordem do coordenador. Nesses pontos o trabalho fica pronto e vai para uma única lista, **"Pendente de aprovação"**, que você aprova no fim.
+> O ganho de eficiência vem do **desbloqueio**: as IAs executam sem pedir aprovação e, com o Chrome desbloqueado, navegam e agem no navegador sozinhas. A segurança fica com **7 travas fixas** que nenhuma IA executa, nem com ordem do coordenador. Nesses pontos o trabalho fica pronto e vai para uma única lista, **"Pendente de aprovação"**, que você aprova no fim.
 
-![Travas de segurança da /orquestration](img/travas.png)
+![Desbloqueio total, com travas fixas](img/travas.png)
 
-A estrutura tem duas camadas.
+A estrutura tem duas camadas: o desbloqueio, que dá velocidade, e as travas, que são a rede de segurança.
 
-### Camada 1: autonomia total
+### Camada 1: desbloqueio das IAs
 
 - **Sem pedidos de aprovação.** No Orca, cada agente roda com os argumentos que dispensam confirmação:
 
@@ -140,9 +140,19 @@ A estrutura tem duas camadas.
 - **Dúvida vai ao coordenador.** Dúvida de escopo vira `orca orchestration ask`. Sem resposta, o worker escolhe a opção mais segura e reversível, registra e segue.
 - **Gates de rotina resolvidos na hora.** Arquitetura, refatoração, apagar código dentro da worktree ou criar uma migração nova: o coordenador decide sozinho e registra a decisão no board com `gate-create` + `gate-resolve`.
 
+### Camada 1: desbloqueio do Chrome
+
+O navegador também foi desbloqueado, para os agentes trabalharem na web sem pedir cada clique:
+
+- **Claude:** a extensão **Claude in Chrome** está instalada, é ativada sozinha e abre em modo automático.
+- **Codex:** os plugins `chrome`, `browser` e `computer-use` estão ligados na configuração do Codex.
+- **Orca:** o acesso remoto ao navegador está habilitado.
+
+Com isso, Claude e Codex abrem, leem e agem no seu Chrome sozinhos: navegam, clicam, testam páginas e conferem a interface publicada. Tarefas de navegador, como QA visual, pesquisa e testes de interface, andam sem você aprovar clique por clique. Hoje são o Claude e o Codex que têm esse acesso ao Chrome; as outras IAs trabalham pelo terminal.
+
 ### Camada 2: travas fixas
 
-Nenhuma IA executa estas ações, nem com ordem do coordenador:
+Nenhuma IA executa estas ações, nem com ordem do coordenador. As mesmas travas valem para o que os agentes fazem no Chrome:
 
 1. merge ou push na `main`;
 2. deploy;
@@ -167,7 +177,7 @@ Ao chegar numa trava, a IA não para o resto do trabalho. Ela deixa pronto o que
 
 ### Por que essa estrutura é boa
 
-- **Velocidade sem babá.** Ninguém espera você aprovar passo de rotina. As ondas andam em paralelo enquanto você faz outra coisa.
+- **Velocidade sem babá.** Ninguém espera você aprovar passo de rotina nem clique no navegador. As ondas andam em paralelo enquanto você faz outra coisa.
 - **Risco concentrado numa lista.** Tudo o que pode causar estrago real chega numa única lista, já preparado. Você não precisa vigiar seis IAs, só ler essa lista.
 - **Decisões rastreáveis.** O que o coordenador decide sozinho fica registrado no board e aparece no relatório em "Decisões tomadas sozinho".
 - **Reversível por construção.** Cada worker trabalha na própria worktree e branch. Até a `main` receber o merge que você aprovou, qualquer coisa pode ser descartada.

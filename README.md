@@ -14,7 +14,7 @@ Equipe de seis IAs trabalhando juntas no [Orca](https://github.com/stablyai/orca
 - **Revisão cruzada sem viés.** Toda entrega é revisada por uma IA de outro fornecedor, que não sabe quem fez.
 - **Gestão de créditos com balanço saudável.** A cota real de cada IA é lida antes de cada onda, sem gastar tokens. Quem tem mais folga recebe mais trabalho, quem está adiantado no consumo da janela recebe menos, e Claude e Codex guardam 15% para revisão crítica.
 - **Redistribuição automática.** Se uma IA bate o limite no meio do trabalho, a tarefa passa na hora para a próxima com folga, e a IA sem cota fica de fora até o reset.
-- **Autonomia total com limites fixos.** Os agentes executam sem pedir aprovação. Merge na main, deploy, produção, dados reais e segredos ficam prontos, mas listados em "Pendente de aprovação" para você decidir.
+- **Desbloqueio total com travas fixas.** Os agentes executam sem pedir aprovação, e Claude e Codex agem no Chrome sozinhos. Merge na main, deploy, produção, dados reais e segredos ficam prontos, mas listados em "Pendente de aprovação" para você decidir.
 - **Economia de tokens.** Respostas de até 15 linhas, handoffs curtos e o modelo mais barato que resolve cada tarefa.
 - **Instaladores para macOS, Linux e Windows.** Um comando instala e confere tudo em todas as IAs.
 
@@ -22,11 +22,11 @@ Equipe de seis IAs trabalhando juntas no [Orca](https://github.com/stablyai/orca
 
 ![Gestão de créditos](docs/img/gestao-de-creditos.png)
 
-## Travas de segurança
+## Desbloqueio total, com travas fixas
 
-Autonomia total, com travas fixas. As IAs executam sozinhas e obedecem ao coordenador, mas 7 ações nenhuma executa, nem com ordem: merge ou push na main, deploy, ação em produção, apagar ou alterar dados reais, migração em banco real, segredos e apagar arquivos fora da worktree. Nesses pontos a IA deixa pronto (branch, PR, comando) e lista em "Pendente de aprovação", e você aprova tudo num só lugar no fim. A mesma regra vai para todas as IAs. Detalhes em [docs/IDEIA.md](docs/IDEIA.md#travas-de-segurança-autonomia-total-com-travas-fixas).
+As IAs foram desbloqueadas: rodam sem pedir aprovação e obedecem 100% ao coordenador. O Chrome também: o Claude usa a extensão Claude in Chrome em modo automático e o Codex tem os plugins `chrome`, `browser` e `computer-use`, então os dois navegam, clicam e testam páginas sozinhos. A rede de segurança são 7 travas fixas que nenhuma IA executa, nem no Chrome: merge ou push na main, deploy, ação em produção, apagar ou alterar dados reais, migração em banco real, segredos e apagar arquivos fora da worktree. Nesses pontos a IA deixa pronto (branch, PR, comando) e lista em "Pendente de aprovação", e você aprova tudo num só lugar no fim. Detalhes em [docs/IDEIA.md](docs/IDEIA.md#desbloqueio-total-com-travas-fixas).
 
-![Travas de segurança](docs/img/travas.png)
+![Desbloqueio total, com travas fixas](docs/img/travas.png)
 
 ## Como fica no Orca
 
