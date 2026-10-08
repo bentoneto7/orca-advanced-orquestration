@@ -1,0 +1,15 @@
+# Trecho sugerido para ~/.grok/config.toml (mescle com o que ja existe; nao substitua o arquivo inteiro)
+
+[ui]
+# "auto" pede confirmacao so para acoes arriscadas. Use "default" para confirmar tudo.
+permission_mode = "auto"
+yolo = false
+
+[models]
+default = "grok-4.6"
+default_reasoning_effort = "high"   # "xhigh" gasta mais; "high" equilibra custo e qualidade como worker
+
+# As regras em ~/.grok/rules/*.md ja carregam em todo projeto, sem configurar nada.
+# Se quiser guardar as regras da equipe em outra pasta:
+# [paths]
+# extra_rule_dirs = ["~/orca-skills/config"]

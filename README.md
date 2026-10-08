@@ -1,24 +1,39 @@
 # orca-skills
 
-Skills para coordenar varias IAs no [Orca](https://github.com/stablyai/orca) com balanceamento de tokens.
+Equipe de seis IAs trabalhando juntas no [Orca](https://github.com/stablyai/orca), com balanceamento de tokens: **Claude** e **Codex** alternam o trabalho pesado conforme a cota de cada um, e **Cursor, Grok, Antigravity e Muse** pegam as subtarefas. Qualquer uma pode coordenar ou ser subagente, e as tarefas independentes rodam em paralelo.
 
-## Skills
+**Tutorial completo, do passo 1 até a configuração concluída: [docs/TUTORIAL.md](docs/TUTORIAL.md).**
 
-- `skills/orquestration` - equipe multi-IA: Claude e Codex como principais, alternando o trabalho pesado conforme a cota de cada um (`orca account list --json`); Cursor, Muse, Antigravity e Grok nas subatividades. Inclui board, revisao cruzada entre fornecedores, gates de aprovacao e execucao em paralelo (ate 4 workers, cada um na propria worktree).
-- `skills/orchestration` - a skill oficial de orquestracao do Orca, com uma secao extra no fim ("Equipe Zuuuw") que manda carregar a `orquestration` sempre que o Orca orquestra.
+## Instalação rápida (Windows)
 
-## Instalacao (Windows)
+Com o Orca e as CLIs já instalados e logados:
 
-Copie as duas pastas para a pasta de skills de cada agente:
+```powershell
+gh repo clone bentoneto7/orca-skills
+cd orca-skills
+powershell -ExecutionPolicy Bypass -File .\scripts\instalar.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\instalar.ps1 -Verificar
+```
 
-| Agente | Pasta |
+Depois, no Orca: **Settings > Agents > Refresh** e abra uma sessão nova de cada agente.
+
+## O que tem aqui
+
+| Caminho | O que é |
 |---|---|
-| Claude Code | `~/.claude/skills` |
-| Codex e Cursor | `~/.agents/skills` (compartilhada) |
-| Grok | `~/.grok/skills` |
-| Antigravity | `~/.gemini/antigravity/skills` |
-| Muse Code | `muse skills install ./skills/orquestration --scope user` |
+| `skills/orquestration/` | Regras da equipe: balanceamento Claude/Codex pela cota, papel de cada IA, board, revisão cruzada entre fornecedores, gates de aprovação e execução em paralelo (até 4 workers). |
+| `skills/orchestration/` | A skill oficial de orquestração do Orca, com a seção "Equipe Zuuuw" no fim, que carrega a `orquestration`. |
+| `config/equipe-orca.md` | Regras de como cada IA recebe e responde as chamadas do coordenador. O script grava esse texto nas instruções globais de cada IA. |
+| `config/grok-rules-orca-equipe.md` | As mesmas regras no formato do Grok (`~/.grok/rules/`). |
+| `config/cursor-rules-orca-equipe.mdc` | As mesmas regras no formato do Cursor (`~/.cursor/rules/`). |
+| `config/grok-config.toml.example` | Trecho sugerido para o `~/.grok/config.toml`. |
+| `config/orchestration-hook.md` | A seção "Equipe Zuuuw" que o script acrescenta na skill do Orca. |
+| `scripts/instalar.ps1` | Instala tudo em todas as IAs (`-Verificar` só confere). |
 
-Depois, no Orca, clique em Refresh em Settings > Agents e abra uma sessao nova de cada agente.
+## Uso
 
-> Ao clicar em Update na skill de orquestracao do Orca, a secao "Equipe Zuuuw" e apagada. Copie a `skills/orchestration` deste repo de volta para restaurar.
+Numa sessão do Claude ou do Codex aberta pelo Orca:
+
+```
+/orquestration <o que precisa ser feito>
+```
