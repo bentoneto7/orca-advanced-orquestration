@@ -18,6 +18,8 @@ Equipe de seis IAs trabalhando juntas no [Orca](https://github.com/stablyai/orca
 
 ![Benefícios](docs/img/beneficios.png)
 
+![Gestão de créditos](docs/img/gestao-de-creditos.png)
+
 ## Instalação rápida
 
 Com o Orca e as CLIs já instalados e logados:
