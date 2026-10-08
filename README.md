@@ -1,15 +1,15 @@
-# Orca Skills: multi-agent AI orchestration for Claude Code, Codex, Cursor, Grok, Gemini/Antigravity and Muse
+# Orca Advanced Orquestration: multi-agent AI orchestration for Claude Code, Codex, Cursor, Grok, Gemini/Antigravity and Muse
 
 **Run six AI coding agents in parallel in [Orca](https://github.com/stablyai/orca), with real quota and rate-limit balancing and 100% autonomous sub-agents.**
 
-[![GitHub stars](https://img.shields.io/github/stars/bentoneto7/orca-skills?style=flat&logo=github)](https://github.com/bentoneto7/orca-skills/stargazers)
+[![GitHub stars](https://img.shields.io/github/stars/bentoneto7/orca-advanced-orquestration?style=flat&logo=github)](https://github.com/bentoneto7/orca-advanced-orquestration/stargazers)
 [![Platforms](https://img.shields.io/badge/platforms-macOS%20%7C%20Linux%20%7C%20Windows-blue)](docs/TUTORIAL.md)
 [![Agents](https://img.shields.io/badge/agents-Claude%20Code%20%7C%20Codex%20%7C%20Cursor%20%7C%20Grok%20%7C%20Antigravity%20%7C%20Muse-7C9CFF)](docs/IDEA.md)
 [![Built for Orca](https://img.shields.io/badge/built%20for-Orca-22C55E)](https://github.com/stablyai/orca)
 
 ## What is this
 
-`orca-skills` is a **multi-agent orchestration** setup for **AI coding agents**. One request to the `/orquestration-avanced` skill splits the work across **Claude Code**, **OpenAI Codex CLI**, **Cursor CLI**, **Grok CLI**, **Gemini via the Antigravity CLI** and **Muse**, running as **parallel agents** in separate **git worktrees** inside [Orca](https://github.com/stablyai/orca). Before every wave it reads each agent's real usage with zero-token commands, so the work follows each subscription's **quota and rate limits**: whoever has more headroom gets more work, and an agent that hits its limit is replaced on the spot. Sub-agents run with no confirmation prompts, obey the coordinator and review each other across vendors.
+`orca-advanced-orquestration` is a **multi-agent orchestration** setup for **AI coding agents**. One request to the `/orca-advanced-orquestration` skill splits the work across **Claude Code**, **OpenAI Codex CLI**, **Cursor CLI**, **Grok CLI**, **Gemini via the Antigravity CLI** and **Muse**, running as **parallel agents** in separate **git worktrees** inside [Orca](https://github.com/stablyai/orca). Before every wave it reads each agent's real usage with zero-token commands, so the work follows each subscription's **quota and rate limits**: whoever has more headroom gets more work, and an agent that hits its limit is replaced on the spot. Sub-agents run with no confirmation prompts, obey the coordinator and review each other across vendors.
 
 ![Diagram of the team dynamics: one request, a coordinator that reads quotas, up to six parallel workers in git worktrees, cross-review and delivery](docs/img/dynamics.png)
 
@@ -45,8 +45,8 @@ With Orca and the CLIs already installed and logged in (full walkthrough in the 
 **macOS / Linux**
 
 ```bash
-git clone https://github.com/bentoneto7/orca-skills.git
-cd orca-skills
+git clone https://github.com/bentoneto7/orca-advanced-orquestration.git
+cd orca-advanced-orquestration
 bash scripts/instalar.sh
 bash scripts/instalar.sh --verificar
 ```
@@ -54,8 +54,8 @@ bash scripts/instalar.sh --verificar
 **Windows**
 
 ```powershell
-gh repo clone bentoneto7/orca-skills
-cd orca-skills
+gh repo clone bentoneto7/orca-advanced-orquestration
+cd orca-advanced-orquestration
 powershell -ExecutionPolicy Bypass -File .\scripts\instalar.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\instalar.ps1 -Verificar
 ```
@@ -63,10 +63,10 @@ powershell -ExecutionPolicy Bypass -File .\scripts\instalar.ps1 -Verificar
 Then, in Orca: **Settings > Agents > Refresh**, set **Settings > Orchestration > Nested worker depth = 2** and open a new Claude or Codex session in your project:
 
 ```
-/orquestration-avanced <what needs to be done>
+/orca-advanced-orquestration <what needs to be done>
 ```
 
-The installer also removes the old `orquestration` skill folders (the skill was renamed to `orquestration-avanced`).
+The installer also removes the old `orquestration` and `orquestration-avanced` skill folders (the skill was renamed to `orca-advanced-orquestration`).
 
 ## 100% autonomy
 
@@ -87,7 +87,7 @@ A real (cropped) screenshot of Orca running the skill, and the quota reading don
 ## FAQ
 
 **How do I run Claude Code and Codex in parallel?**
-Install [Orca](https://github.com/stablyai/orca) and this repository's skills, then run `/orquestration-avanced <task>` in a Claude or Codex session. The coordinator creates tasks on Orca's board and starts each worker with `orca orchestration worker-start --worktree new-child`, so every agent works at the same time in its own git worktree, without touching the others' files.
+Install [Orca](https://github.com/stablyai/orca) and this repository's skills, then run `/orca-advanced-orquestration <task>` in a Claude or Codex session. The coordinator creates tasks on Orca's board and starts each worker with `orca orchestration worker-start --worktree new-child`, so every agent works at the same time in its own git worktree, without touching the others' files.
 
 **How do I avoid hitting Claude usage limits?**
 The skill reads Claude's 5-hour and weekly usage before every wave. From 60% Claude only gets light and medium tasks, from 80% it only reviews, and from 95% it sits out until the reset. Heavy work moves to Codex or to whichever agent has more headroom, and Claude and Codex keep a 15% weekly reserve for critical review.
@@ -117,9 +117,9 @@ The default team is all six. An agent leaves a run when it has no quota or when 
 
 | Path | What it is |
 |---|---|
-| `skills/orquestration-avanced/` | The team rules: credit management by real quota, each AI's role, board, cross-review between vendors, autonomy with fixed limits and parallel execution (up to 6 workers). |
-| `skills/orquestration-avanced/cotas.mjs` | Reads each AI's quota (`orca account list --json`, no tokens spent) and prints the `Quotas` line with usage, pace, reset and each AI's share. |
-| `skills/orchestration/` | Orca's official orchestration skill, with the "Zuuuw team" section at the end, which loads `orquestration-avanced`. |
+| `skills/orca-advanced-orquestration/` | The team rules: credit management by real quota, each AI's role, board, cross-review between vendors, autonomy with fixed limits and parallel execution (up to 6 workers). |
+| `skills/orca-advanced-orquestration/cotas.mjs` | Reads each AI's quota (`orca account list --json`, no tokens spent) and prints the `Quotas` line with usage, pace, reset and each AI's share. |
+| `skills/orchestration/` | Orca's official orchestration skill, with the "Zuuuw team" section at the end, which loads `orca-advanced-orquestration`. |
 | `config/equipe-orca.md` | Rules for how each AI takes and answers the coordinator's calls. The script writes this text into each AI's global instructions. |
 | `config/grok-rules-orca-equipe.md` | The same rules in Grok's format (`~/.grok/rules/`). |
 | `config/cursor-rules-orca-equipe.mdc` | The same rules in Cursor's format (`~/.cursor/rules/`). |
@@ -132,7 +132,7 @@ The default team is all six. An agent leaves a run when it has no quota or when 
 
 - [The idea, the dynamics and why it is more efficient](docs/IDEA.md)
 - [Full tutorial, from zero to a finished setup](docs/TUTORIAL.md)
-- [The skill itself (`SKILL.md`)](skills/orquestration-avanced/SKILL.md)
+- [The skill itself (`SKILL.md`)](skills/orca-advanced-orquestration/SKILL.md)
 - [How to contribute](CONTRIBUTING.md)
 
 ## Contributing

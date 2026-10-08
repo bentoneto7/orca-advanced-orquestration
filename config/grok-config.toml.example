@@ -16,4 +16,4 @@ default_reasoning_effort = "xhigh"   # "high" saves tokens if Grok is only a wor
 # The rules in ~/.grok/rules/*.md already load in every project, no setup needed.
 # If you want to keep the team rules in another folder:
 # [paths]
-# extra_rule_dirs = ["~/orca-skills/config"]
+# extra_rule_dirs = ["~/orca-advanced-orquestration/config"]

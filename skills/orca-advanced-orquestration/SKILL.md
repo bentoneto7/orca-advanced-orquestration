@@ -1,15 +1,15 @@
 ---
-name: orquestration-avanced
+name: orca-advanced-orquestration
 description: >-
   Zuuuw multi-AI team in Orca with credit management. Use when the user types
-  /orquestration-avanced, asks to orchestrate, coordinate several agents, split
+  /orca-advanced-orquestration, asks to orchestrate, coordinate several agents, split
   a task across AIs or set up the board. When invoked, it reads each AI's real
   quota, breaks the task down and distributes it across the AIs with quota
   (claude, codex, cursor, grok, antigravity, muse) in parallel, weighted by each
   one's headroom, with sub-agent expansion. Loads Orca's orchestration skill.
 ---
 
-# /orquestration-avanced - multi-AI team in Orca
+# /orca-advanced-orquestration - multi-AI team in Orca
 
 ## 0. Automatic mode (default behavior)
 When invoked, do NOT ask how to split the work. Run it directly:
@@ -70,7 +70,7 @@ Every run uses ALL AIs with quota: each one gets at least one task, in the propo
 Save it on the board; each line becomes a task. Hierarchical IDs show the expansion.
 
 ```
-PLAN /orquestration-avanced - <title>
+PLAN /orca-advanced-orquestration - <title>
 Coordinator: <claude|codex>   Sub-agent depth: <1|2>
 Quotas: <cotas.mjs line: agent usage 5h/weekly (pace, reset) status -> share%>
 

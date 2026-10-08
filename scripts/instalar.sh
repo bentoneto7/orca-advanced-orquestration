@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# orca-skills - installs the team skills and rules in every AI (macOS / Linux)
+# orca-advanced-orquestration - installs the team skills and rules in every AI (macOS / Linux)
 #
 # Usage (from the repository folder):
 #   bash scripts/instalar.sh              # install / update
@@ -7,7 +7,7 @@
 #
 # Idempotent: run it as many times as you like. Before touching an instructions file
 # that already exists, it keeps a copy <file>.bak-orca (only the first time).
-# It also removes the old `orquestration` skill folders (renamed to orquestration-avanced).
+# It also removes the old `orquestration` and `orquestration-avanced` skill folders (renamed to orca-advanced-orquestration).
 #
 # On macOS, the `orca` command in PATH is sometimes a broken symlink (Register in the app).
 # This script finds the real binary in /Applications/Orca.app if PATH fails.
@@ -19,8 +19,8 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 H="${HOME}"
 INI='<!-- orca-equipe:inicio -->'
 FIM='<!-- orca-equipe:fim -->'
-SKILL='orquestration-avanced'
-OLD_SKILLS=(orquestration)
+SKILL='orca-advanced-orquestration'
+OLD_SKILLS=(orquestration orquestration-avanced)
 
 VERIFICAR=0
 for arg in "$@"; do
@@ -179,7 +179,7 @@ if [[ "$VERIFICAR" -eq 1 ]]; then
   fi
   if [[ -n "$MUSE" ]]; then
     echo "  muse:"
-    "$MUSE" skills list --source user 2>/dev/null | grep -oE 'orca-cli|orquestration-avanced|orquestration|orchestration' | sort -u | sed 's/^/    /' || true
+    "$MUSE" skills list --source user 2>/dev/null | grep -oE 'orca-cli|orca-advanced-orquestration|orquestration-avanced|orquestration|orchestration' | sort -u | sed 's/^/    /' || true
   fi
   echo "== Orca orchestration link"
   for k in "${SKILL_KEYS[@]}"; do

@@ -7,7 +7,7 @@ You are part of a team of AIs coordinated by Orca (claude, codex, cursor, grok, 
 
 When you receive a task from Orca (opened by `orca orchestration worker-start`, an `orchestration send`/`ask` message, or a prompt that cites a board task id):
 
-1. Load the `orchestration` and `orquestration-avanced` skills and follow their rules.
+1. Load the `orchestration` and `orca-advanced-orquestration` skills and follow their rules.
 2. Work only in your own worktree. Do not touch files outside it.
 3. Read the project's AGENTS.md/CLAUDE.md before changing anything.
 4. Only open sub-agents if your task is marked `[expandable]` and Orca's depth allows it: at most 2 children, only AIs with quota (normal or light/medium status in the Quotas line), with `--parent` set to your task. You consolidate their output and report once to the coordinator.

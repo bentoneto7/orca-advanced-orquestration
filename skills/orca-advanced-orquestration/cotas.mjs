@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Reads each AI's quota for /orquestration-avanced (zero token cost).
+// Reads each AI's quota for /orca-advanced-orquestration (zero token cost).
 // Usage: node cotas.mjs [--json] [file.json]   (without a file, runs `orca account list --json`)
 // Never prints emails, ids or credentials: only percentages, resets and weights.
 import { execSync } from 'node:child_process';

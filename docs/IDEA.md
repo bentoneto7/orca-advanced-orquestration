@@ -1,6 +1,6 @@
 # The idea: one request, six AIs working together
 
-This document explains the idea behind `orca-skills`: why use six AIs at the same time, how they organize themselves and why that gets more done than a single AI. To install, go straight to the [tutorial](TUTORIAL.md); for the overview, see the [README](../README.md) and the [skill itself](../skills/orquestration-avanced/SKILL.md).
+This document explains the idea behind `orca-advanced-orquestration`: why use six AIs at the same time, how they organize themselves and why that gets more done than a single AI. To install, go straight to the [tutorial](TUTORIAL.md); for the overview, see the [README](../README.md) and the [skill itself](../skills/orca-advanced-orquestration/SKILL.md).
 
 ## The problem
 
@@ -14,7 +14,7 @@ In practice it showed up like this: the Gemini quota ran out, Claude went past 8
 
 ## The idea
 
-Treat the subscriptions as a **team**, not as separate tools. You make a single request and the `/orquestration-avanced` skill, inside [Orca](https://github.com/stablyai/orca), splits the work across six AIs at the same time:
+Treat the subscriptions as a **team**, not as separate tools. You make a single request and the `/orca-advanced-orquestration` skill, inside [Orca](https://github.com/stablyai/orca), splits the work across six AIs at the same time:
 
 | AI | Plan | Main role |
 |---|---|---|
@@ -57,7 +57,7 @@ flowchart LR
 
 Step by step:
 
-1. **Request.** You describe the goal once: `/orquestration-avanced <what needs to be done>`.
+1. **Request.** You describe the goal once: `/orca-advanced-orquestration <what needs to be done>`.
 2. **Coordinator.** Claude or Codex takes over coordination. If Claude is above 80%, Codex takes the heavy work.
 3. **Quota reading.** The coordinator runs `cotas.mjs`, which reads `orca account list --json` and spends no tokens. Out comes a `Quotas` line with usage, pace, reset and each AI's share.
 4. **Plan.** The task is broken down automatically, without asking, into tasks with IDs (T1, T2, T4.1...) organized in waves. The "Coverage" line shows what each AI took: every AI with quota gets at least one task.
@@ -70,7 +70,7 @@ Step by step:
 
 This is the plan format defined in `SKILL.md`. Each line becomes a task on Orca's board, and the Quotas line uses the real numbers from Oct 8, 2026, 7:28 PM (Brasília time):
 
-![Plan format of /orquestration-avanced: Quotas line, three waves of tasks T1 to T9 with dependencies and the Coverage line](img/print-plan.png)
+![Plan format of /orca-advanced-orquestration: Quotas line, three waves of tasks T1 to T9 with dependencies and the Coverage line](img/print-plan.png)
 
 ### In practice, inside Orca
 
@@ -167,7 +167,7 @@ With that, Claude and Codex open, read and act in your Chrome on their own: they
 
 The final report, in the skill's format, shows what each AI did and the Credits block:
 
-![Final report format of /orquestration-avanced: what each AI did, decisions taken alone, the Credits block and the pending-approval exception](img/print-report.png)
+![Final report format of /orca-advanced-orquestration: what each AI did, decisions taken alone, the Credits block and the pending-approval exception](img/print-report.png)
 
 **Only exception, for safety.** The skill keeps a few fixed limits (section 9 of `SKILL.md`): merge or push to `main`, deploy, production actions, deleting or changing real data, running a migration on a real database, touching secrets and deleting files outside the worktree. In these cases the sub-agent does not stop: it leaves the PR, branch or command ready and lists it in the final report under "Pending approval". The rest of the work goes on as usual.
 
@@ -178,5 +178,5 @@ The final report, in the skill's format, shows what each AI did and the Credits 
 3. Open a Claude or Codex session in the project and ask:
 
 ```
-/orquestration-avanced <what needs to be done>
+/orca-advanced-orquestration <what needs to be done>
 ```

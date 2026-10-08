@@ -99,8 +99,8 @@ Clone this repository and run the script for your system:
 **macOS / Linux**
 
 ```bash
-git clone https://github.com/bentoneto7/orca-skills.git
-cd orca-skills
+git clone https://github.com/bentoneto7/orca-advanced-orquestration.git
+cd orca-advanced-orquestration
 bash scripts/instalar.sh
 ```
 
@@ -108,15 +108,15 @@ bash scripts/instalar.sh
 
 ```powershell
 cd $HOME\Documents
-gh repo clone bentoneto7/orca-skills    # or: git clone https://github.com/bentoneto7/orca-skills.git
-cd orca-skills
+gh repo clone bentoneto7/orca-advanced-orquestration    # or: git clone https://github.com/bentoneto7/orca-advanced-orquestration.git
+cd orca-advanced-orquestration
 powershell -ExecutionPolicy Bypass -File .\scripts\instalar.ps1
 ```
 
 What the script does (you can run it again whenever you want, it does not duplicate anything):
 
 1. Installs Orca's official skills (`orca-cli` and `orchestration`) in every AI with `orca skills install`.
-2. Copies the team skill, `orquestration-avanced`, to each AI's skills folder, and removes the old `orquestration` folder if it is there:
+2. Copies the team skill, `orca-advanced-orquestration`, to each AI's skills folder, and removes the old `orquestration` and `orquestration-avanced` folders if they are there:
 
    | AI | Skills folder |
    |---|---|
@@ -126,7 +126,7 @@ What the script does (you can run it again whenever you want, it does not duplic
    | Antigravity CLI | `~/.gemini/antigravity-cli/skills` |
    | Muse | installed with `muse skills install --scope user` |
 
-3. Appends the "Zuuuw team" section to the end of Orca's `orchestration` skill, which tells it to load `orquestration-avanced` whenever Orca orchestrates.
+3. Appends the "Zuuuw team" section to the end of Orca's `orchestration` skill, which tells it to load `orca-advanced-orquestration` whenever Orca orchestrates.
 4. Writes the rules for **how to take calls from the coordinator** into each AI's global instructions (the text is in [`config/equipe-orca.md`](../config/equipe-orca.md)):
 
    | AI | Global instructions file |
@@ -158,7 +158,7 @@ Grok is ready after step 6 (skills in `~/.grok/skills` and rules in `~/.grok/rul
 ## Step 8. Reload and check
 
 1. In Orca: **Settings > Agents > Refresh**.
-2. **Close the open sessions** of each agent and open new ones. Old sessions do not load the new skills. Only restart Orca if, even then, some agent does not recognize `/orquestration-avanced`.
+2. **Close the open sessions** of each agent and open new ones. Old sessions do not load the new skills. Only restart Orca if, even then, some agent does not recognize `/orca-advanced-orquestration`.
 3. Run the check:
 
    macOS / Linux: `bash scripts/instalar.sh --verificar`
@@ -174,7 +174,7 @@ Grok is ready after step 6 (skills in `~/.grok/skills` and rules in `~/.grok/rul
 Open a **Claude** or **Codex** session in the project, through Orca, and ask:
 
 ```
-/orquestration-avanced <describe what needs to be done>
+/orca-advanced-orquestration <describe what needs to be done>
 ```
 
 The coordinator then:
@@ -200,6 +200,6 @@ Setup complete.
 | `agent` opens Grok instead of Cursor | Normal on Windows. Use `cursor-agent`. |
 | Grok asks for login again | `grok login` (or `grok login --device-auth`). |
 | Gemini asks for an API key | Disable Gemini in Orca and use Antigravity. |
-| Agent does not recognize `/orquestration-avanced` | Refresh in Settings > Agents, open a new session and run `bash scripts/instalar.sh --verificar` (Mac) or `instalar.ps1 -Verificar` (Windows). |
-| Still seeing the old `/orquestration` | Run the installer again: it removes the old `orquestration` folders. Then open new sessions. |
+| Agent does not recognize `/orca-advanced-orquestration` | Refresh in Settings > Agents, open a new session and run `bash scripts/instalar.sh --verificar` (Mac) or `instalar.ps1 -Verificar` (Windows). |
+| Still seeing the old `/orquestration` or `/orquestration-avanced` | Run the installer again: it removes the old `orquestration` and `orquestration-avanced` folders. Then open new sessions. |
 | Updated Orca's skill and the link is gone | Run the installer again. |

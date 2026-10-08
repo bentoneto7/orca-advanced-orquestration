@@ -1,5 +1,5 @@
 <#
-  orca-skills - installs the team skills and rules in every AI (Windows / PowerShell 5.1+)
+  orca-advanced-orquestration - installs the team skills and rules in every AI (Windows / PowerShell 5.1+)
   macOS / Linux: bash scripts/instalar.sh
 
   Usage (from the repository folder):
@@ -8,7 +8,7 @@
 
   The script is idempotent: run it as many times as you like. Before touching an instructions
   file that already exists, it keeps a copy <file>.bak-orca (only the first time).
-  It also removes the old `orquestration` skill folders (renamed to orquestration-avanced).
+  It also removes the old `orquestration` and `orquestration-avanced` skill folders (renamed to orca-advanced-orquestration).
 #>
 param([switch]$Verificar)
 
@@ -18,8 +18,8 @@ $H     = $env:USERPROFILE
 $Enc   = New-Object System.Text.UTF8Encoding $false
 $Ini   = '<!-- orca-equipe:inicio -->'
 $Fim   = '<!-- orca-equipe:fim -->'
-$Skill = 'orquestration-avanced'
-$OldSkills = @('orquestration')
+$Skill = 'orca-advanced-orquestration'
+$OldSkills = @('orquestration', 'orquestration-avanced')
 
 function Write-NoBom($path, $text) {
   New-Item -ItemType Directory -Force (Split-Path $path) | Out-Null
@@ -89,7 +89,7 @@ if ($Verificar) {
     Write-Host ("  {0,-24} {1}  [{2}]{3}" -f $k, ($(if ($have.Count) { $have -join ', ' } else { 'none' })), $same, $(if ($old.Count) { "  old: $($old -join ', ')" } else { '' }))
   }
   if (Test-Path "$MuseSkills\$Skill\SKILL.md") { Write-Host "  muse                     $Skill" } else { Write-Host "  muse                     missing $Skill"; $fail++ }
-  if ($Muse) { & $Muse skills list 2>$null | Select-String "^(orca-cli|orchestration|$Skill|orquestration)\t" | ForEach-Object { "    " + ($_.Line -split "`t")[0] } }
+  if ($Muse) { & $Muse skills list 2>$null | Select-String "^(orca-cli|orchestration|$Skill|orquestration-avanced|orquestration)\t" | ForEach-Object { "    " + ($_.Line -split "`t")[0] } }
   Write-Host "== Orca orchestration link"
   foreach ($d in @($SkillDirs.Values) + @($MuseSkills)) {
     $f = "$d\orchestration\SKILL.md"
