@@ -217,6 +217,7 @@ if [[ -n "$MUSE" ]]; then
     if [[ -d "$src" ]]; then
       "$MUSE" skills install "$src" --scope user --force >/dev/null 2>&1 || \
         "$MUSE" skills install "$src" --scope user >/dev/null 2>&1 || true
+        mkdir -p "$H/.config/muse/skills/$s" && cp -R "$src/." "$H/.config/muse/skills/$s/"
     fi
   done
   echo "   muse -> muse skills install (escopo usuario)"

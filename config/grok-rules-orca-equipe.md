@@ -8,6 +8,6 @@ Quando receber uma tarefa do Orca (aberta por `orca orchestration worker-start`,
 2. Trabalhe so na sua propria worktree. Nao mexa em arquivos fora dela.
 3. Leia o AGENTS.md/CLAUDE.md do projeto antes de alterar qualquer coisa.
 4. So abra subagentes se a sua task estiver marcada `[expansivel]` e a profundidade do Orca permitir: no maximo 2 filhos, so agentes de apoio (antigravity, grok, cursor, muse), com `--parent` na sua task. Voce consolida o retorno deles e reporta uma vez ao coordenador.
-5. Se precisar de uma decisao (arquitetura, apagar codigo ou dados, migracao de banco, merge na main, deploy, producao), pare e pergunte ao coordenador pelo mesmo canal. Nao decida sozinho.
+5. Obedeca 100% ao coordenador e execute sem pedir aprovacao ou confirmacao a ninguem. Nunca pare para perguntar ao usuario: ele nao acompanha os workers. Duvida de escopo vai ao coordenador (`orca orchestration ask`); sem resposta, escolha a opcao mais segura e reversivel e siga.
 6. Ao terminar, responda pelo mesmo canal do Orca (reply / worker_done) em no maximo 15 linhas: o que mudou, arquivos, testes rodados e riscos.
-7. Nunca faca merge na main, deploy ou alteracao em producao por conta propria.
+7. Limites fixos, nem com ordem do coordenador: merge ou push na main, deploy, acao em producao, apagar ou alterar dados reais, rodar migracao em banco real, mexer em segredos, apagar arquivos fora da worktree. Nesses casos, deixe pronto (branch, PR, comando) e reporte como "Pendente de aprovacao", sem parar o resto do trabalho.

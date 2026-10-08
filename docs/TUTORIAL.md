@@ -88,6 +88,7 @@ Se o login do Grok cair (acontece quando o token expira), é só rodar `grok log
 3. **Agent Permissions**: o padrão do Orca é "Yolo" (os agentes executam sem pedir confirmação). Se preferir confirmar cada ação, mude para **Manual**.
 4. Ao abrir o Orca pela primeira vez, aceite importar as contas de `~/.claude` e `~/.codex`. Só essas duas mostram consumo de cota no Orca, e é com essa informação que a skill decide quem pega o trabalho pesado.
 5. Em **Settings > Orchestration**, coloque **Nested worker depth = 2**. Assim o coordenador cria workers, e um worker com tarefa grande pode abrir até 2 subagentes de apoio. Com 1, só o coordenador cria workers e a skill quebra tudo sozinha.
+6. Para os workers rodarem sem pedir aprovação, confira os argumentos padrão de cada agente no Orca: Claude e Antigravity com `--dangerously-skip-permissions`, Codex com `--dangerously-bypass-approvals-and-sandbox`, Cursor com `--yolo`, Grok com `--permission-mode bypassPermissions` e Muse com `--yolo`. Mesmo assim, a `/orquestration` nunca faz merge na main, deploy, ação em produção ou mudança em dados reais: ela deixa pronto e lista em "Pendente de aprovação" no relatório final.
 
 ## Passo 6. Instalar as skills e as regras da equipe
 

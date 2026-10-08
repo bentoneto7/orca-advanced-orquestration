@@ -112,7 +112,7 @@ foreach ($k in $SkillDirs.Keys) {
 if ($Muse) {
   foreach ($s in 'orca-cli','orchestration','orquestration') {
     $src = "$H\.agents\skills\$s"; if (-not (Test-Path $src)) { $src = "$Repo\skills\$s" }
-    if (Test-Path $src) { & $Muse skills install $src --scope user 2>&1 | Out-Null }
+    if (Test-Path $src) { & $Muse skills install $src --scope user 2>&1 | Out-Null; $dst = "$H\.config\muse\skills\$s"; New-Item -ItemType Directory -Force $dst | Out-Null; Copy-Item "$src\*" $dst -Recurse -Force }
   }
   Write-Host "   muse -> muse skills install (escopo usuario)"
 } else { Write-Host "   muse nao encontrado, pulei" }

@@ -19,7 +19,7 @@ Ao ser chamada, NAO pergunte como dividir. Execute direto, nesta ordem:
 3. Garanta que TODAS as IAs disponiveis recebam pelo menos uma task (secao 3).
 4. Crie as tasks no board e dispare a Onda 1 em paralelo (secao 5).
 5. Acompanhe, dispare as ondas seguintes, faca a revisao cruzada e entregue (secoes 6 a 10).
-So pare para perguntar ao usuario nos gates (secao 9) ou se a tarefa for ambigua a ponto de mudar o resultado.
+Nunca pare para perguntar ao usuario: ele nao acompanha os workers. Na duvida, escolha a opcao mais segura e reversivel, registre a decisao no board e siga. Os limites fixos ficam na secao 9.
 
 ## 1. Setup
 1. Carregue a skill `orchestration` e rode `orca skills get orchestration` (guia da versao instalada).
@@ -31,7 +31,7 @@ So pare para perguntar ao usuario nos gates (secao 9) ou se a tarefa for ambigua
 ## 2. Os dois principais: Claude e Codex (balanceados)
 Claude e Codex fazem o trabalho pesado e devem ficar com consumo parecido.
 - Meta: diferenca de no maximo 15 pontos percentuais entre o uso semanal de claude e codex.
-- Coordenacao: quem estiver com MENOS uso semanal coordena. Se a sessao atual for do mais gasto, avise o usuario e sugira abrir o /orquestration no outro (mas siga trabalhando se ele nao responder).
+- Coordenacao: quem estiver com MENOS uso semanal coordena. Se a sessao atual for do mais gasto, registre isso no relatorio final e siga trabalhando, sem esperar resposta.
 - Implementacao pesada: vai para o principal com menos uso. Em empate, codex implementa e claude coordena.
 - O principal que coordena tambem recebe uma task de trabalho (nunca fica so coordenando): em geral a integracao final ou a parte mais critica.
 - Se um dos dois passar de 70% na janela de 5h ou de 80% na semana, todo trabalho pesado novo vai para o outro ate equilibrar.
@@ -105,7 +105,7 @@ A profundidade vem da configuracao do Orca (Settings > Orchestration > Nested wo
   - filhos reportam ao pai (15 linhas); o pai consolida e reporta ao coordenador uma unica vez;
   - filhos nao abrem netos, mesmo que a profundidade permita.
 - Antes de expandir, o worker confere se a soma de workers ativos nao passa do limite da secao 5; se passar, faz sozinho.
-- Quando a profundidade do Orca aumentar no futuro, mantenha estas regras e so libere netos se o usuario pedir.
+- Quando a profundidade do Orca aumentar no futuro, mantenha estas regras e so libere netos se o usuario pedir explicitamente.
 
 ## 7. Economia de tokens
 - Cada worker devolve no maximo 15 linhas: o que fez, arquivos alterados, testes, riscos.
@@ -117,14 +117,18 @@ A profundidade vem da configuracao do Orca (Settings > Orchestration > Nested wo
 - Todo trabalho e revisado por agente de OUTRO fornecedor que nao fez a task (ex.: codex faz, grok revisa; muse faz, cursor revisa; claude faz, codex revisa).
 - O revisor nao sabe qual IA fez; aponta erros, nao elogia.
 
-## 9. Gates (perguntar ao usuario)
-`gate-create` antes de: arquitetura, apagar codigo/dados, migracao de banco, merge em main, deploy ou acao em producao.
+## 9. Autonomia total e limites fixos
+- Todos os agentes rodam sem pedir aprovacao (o Orca abre cada um em modo livre). Os workers obedecem 100% ao coordenador: executam o que foi pedido, sem pedir confirmacao a ninguem.
+- O coordenador resolve sozinho os gates de rotina (arquitetura, refatoracao, apagar codigo dentro da worktree, criar migracao nova): decide, registra no board com `gate-create` + `gate-resolve` e segue.
+- Limites fixos, que ninguem executa nem com ordem do coordenador: merge ou push na main, deploy, acao em producao, apagar ou alterar dados reais/de producao, rodar migracao em banco real, mexer em segredos ou credenciais, apagar arquivos fora da worktree.
+- Ao chegar num limite fixo, nao pare e nao pergunte: deixe pronto (branch, PR aberto, comando preparado) e liste em "Pendente de aprovacao" no relatorio final. O usuario aprova quando voltar.
 
 ## 10. Entrega final
-Resumo: o plano executado (com a linha Cobertura), o que cada IA fez, qual versao venceu e por que, testes rodados, o que falta, e o uso final de claude x codex (% semanal).
+Resumo: o plano executado (com a linha Cobertura), o que cada IA fez, qual versao venceu e por que, testes rodados, decisoes que voce tomou sozinho, a lista "Pendente de aprovacao" (limites fixos da secao 9, com o comando ou PR pronto) e o uso final de claude x codex (% semanal).
 
 ## 11. Quando voce for worker (nao coordenador)
 - Responda ao coordenador pelo mesmo canal (reply / worker_done) em ate 15 linhas.
 - Trabalhe so na sua worktree.
 - So abra subagentes se sua task estiver marcada `[expansivel]` e a profundidade permitir (secao 6).
-- Decisao de gate: escale ao coordenador, nao decida.
+- Obedeca 100% ao coordenador e nunca pergunte nada ao usuario nem peca confirmacao. Duvida de escopo: `orca orchestration ask` ao coordenador; se ele nao responder, escolha a opcao mais segura e siga.
+- Limites fixos da secao 9: nao execute; prepare e reporte ao coordenador.
