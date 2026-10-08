@@ -22,6 +22,12 @@ Equipe de seis IAs trabalhando juntas no [Orca](https://github.com/stablyai/orca
 
 ![Gestão de créditos](docs/img/gestao-de-creditos.png)
 
+## Travas de segurança
+
+Autonomia total, com travas fixas. As IAs executam sozinhas e obedecem ao coordenador, mas 7 ações nenhuma executa, nem com ordem: merge ou push na main, deploy, ação em produção, apagar ou alterar dados reais, migração em banco real, segredos e apagar arquivos fora da worktree. Nesses pontos a IA deixa pronto (branch, PR, comando) e lista em "Pendente de aprovação", e você aprova tudo num só lugar no fim. A mesma regra vai para todas as IAs. Detalhes em [docs/IDEIA.md](docs/IDEIA.md#travas-de-segurança-autonomia-total-com-travas-fixas).
+
+![Travas de segurança](docs/img/travas.png)
+
 ## Como fica no Orca
 
 Print real do Orca rodando a `/orquestration` (recortado) e a leitura de cotas feita antes de cada onda, sem gastar tokens. Mais prints e o formato do plano e do relatório em [docs/IDEIA.md](docs/IDEIA.md).

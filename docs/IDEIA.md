@@ -29,7 +29,7 @@ Os pilares da ideia:
 
 1. **Paralelismo.** Até 6 workers ao mesmo tempo, cada um na própria git worktree. Com **Nested worker depth = 2**, um worker com tarefa grande ainda pode abrir até 2 subagentes de apoio.
 2. **Claude e Codex como dupla principal.** O trabalho pesado fica com quem dos dois tiver mais folga. Cursor, Grok e Muse pegam partes reais de implementação, não só sobras.
-3. **Autonomia total com limites fixos.** Você não precisa acompanhar os subagentes: todos rodam sem pedir aprovação e obedecem ao coordenador. O que é arriscado fica pronto e vai para "Pendente de aprovação".
+3. **Autonomia total com travas fixas.** Você não precisa acompanhar os subagentes: todos rodam sem pedir aprovação e obedecem ao coordenador. O que é arriscado fica pronto e vai para "Pendente de aprovação" (veja [Travas de segurança](#travas-de-segurança-autonomia-total-com-travas-fixas)).
 4. **Revisão cruzada.** O trabalho de uma IA é revisado por uma IA de outro fornecedor.
 5. **Gestão de créditos.** A divisão segue a cota real de cada IA e o ritmo de gasto, para nenhuma esgotar antes do reset.
 6. **Economia de tokens.** Handoffs curtos, regras compactas e nada de reler arquivos grandes.
@@ -114,18 +114,64 @@ Leitura real feita no PC em 08/10, às 19:08. Repare que ela confirma a ideia: o
 
 ![Saída real do cotas.mjs e do Orca](img/print-cotas.png)
 
-## Segurança
+## Travas de segurança: autonomia total, com travas fixas
 
-Autonomia total não significa fazer qualquer coisa. Estes limites são fixos e nenhuma IA executa, nem com ordem do coordenador:
+> [!IMPORTANT]
+> As IAs executam tudo sozinhas, sem pedir aprovação a ninguém. Só que existem **7 travas fixas** que nenhuma IA executa, nem com ordem do coordenador. Nesses pontos o trabalho fica pronto e vai para uma única lista, **"Pendente de aprovação"**, que você aprova no fim.
 
-- merge ou push na `main`;
-- deploy e qualquer ação em produção;
-- apagar ou alterar dados reais;
-- rodar migração em banco real;
-- mexer em segredos ou credenciais;
-- apagar arquivos fora da própria worktree.
+![Travas de segurança da /orquestration](img/travas.png)
 
-Quando o trabalho chega num desses pontos, a IA deixa tudo pronto (branch, PR ou comando) e lista em **"Pendente de aprovação"** no relatório. O resto continua andando. Os gates de rotina (arquitetura, refatoração, migração nova no código) o coordenador decide sozinho e registra no board.
+A estrutura tem duas camadas.
+
+### Camada 1: autonomia total
+
+- **Sem pedidos de aprovação.** No Orca, cada agente roda com os argumentos que dispensam confirmação:
+
+  | IA | Argumento |
+  |---|---|
+  | Claude | `--dangerously-skip-permissions` |
+  | Codex | `--dangerously-bypass-approvals-and-sandbox` |
+  | Cursor | `--yolo` |
+  | Grok | `--permission-mode bypassPermissions` |
+  | Antigravity | `--dangerously-skip-permissions` |
+  | Muse | `--yolo` |
+
+- **Obediência ao coordenador.** Os workers obedecem 100% ao coordenador e nunca param para perguntar ao usuário, porque você não acompanha os workers.
+- **Dúvida vai ao coordenador.** Dúvida de escopo vira `orca orchestration ask`. Sem resposta, o worker escolhe a opção mais segura e reversível, registra e segue.
+- **Gates de rotina resolvidos na hora.** Arquitetura, refatoração, apagar código dentro da worktree ou criar uma migração nova: o coordenador decide sozinho e registra a decisão no board com `gate-create` + `gate-resolve`.
+
+### Camada 2: travas fixas
+
+Nenhuma IA executa estas ações, nem com ordem do coordenador:
+
+1. merge ou push na `main`;
+2. deploy;
+3. ação em produção;
+4. apagar ou alterar dados reais;
+5. rodar migração em banco real;
+6. mexer em segredos ou credenciais;
+7. apagar arquivos fora da worktree.
+
+### O que acontece numa trava
+
+```mermaid
+flowchart TD
+    T[Tarefa ou ação] --> Q{É uma trava?}
+    Q -- não --> E[Executa sozinho<br/>e registra no board]
+    Q -- sim --> P[Prepara tudo:<br/>branch + PR + comando exato]
+    P --> L[Pendente de aprovação<br/>no relatório final]
+    L --> V[Você aprova<br/>num só lugar]
+```
+
+Ao chegar numa trava, a IA não para o resto do trabalho. Ela deixa pronto o que for preciso (a branch, o PR ou o comando exato) e lista em "Pendente de aprovação" no relatório final. Você revisa e aprova tudo num lugar só.
+
+### Por que essa estrutura é boa
+
+- **Velocidade sem babá.** Ninguém espera você aprovar passo de rotina. As ondas andam em paralelo enquanto você faz outra coisa.
+- **Risco concentrado numa lista.** Tudo o que pode causar estrago real chega numa única lista, já preparado. Você não precisa vigiar seis IAs, só ler essa lista.
+- **Decisões rastreáveis.** O que o coordenador decide sozinho fica registrado no board e aparece no relatório em "Decisões tomadas sozinho".
+- **Reversível por construção.** Cada worker trabalha na própria worktree e branch. Até a `main` receber o merge que você aprovou, qualquer coisa pode ser descartada.
+- **Nenhuma IA é o elo fraco.** O instalador grava as mesmas regras nas instruções globais de todas: `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`, `~/.gemini/GEMINI.md` (Antigravity), `~/.config/muse/AGENTS.md`, `~/.grok/rules/orca-equipe.md` e `~/.cursor/rules/orca-equipe.mdc`. Qualquer uma, coordenando ou como worker, segue as mesmas travas.
 
 O relatório final, no formato da skill, junta tudo isso: o que cada IA fez, o que ficou para você aprovar e o bloco Créditos.
 
