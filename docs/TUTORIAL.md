@@ -2,47 +2,70 @@
 
 Este passo a passo deixa seis IAs trabalhando juntas no [Orca](https://github.com/stablyai/orca): **Claude** e **Codex** como agentes principais (o trabalho pesado alterna entre os dois conforme a cota de cada um) e **Cursor, Grok, Antigravity e Muse** nas subtarefas. Qualquer uma pode coordenar ou trabalhar como subagente, e as tarefas independentes rodam em paralelo, cada uma na própria worktree.
 
-Feito para Windows 10/11 com PowerShell. Use sempre login pelo navegador, com a sua assinatura de cada serviço, sem API key.
+Feito para **macOS** (Terminal / zsh) e **Windows 10/11** (PowerShell). Use sempre login pelo navegador, com a sua assinatura de cada serviço, sem API key.
 
-> Dica: durante instalações e logins, espere cada comando terminar antes de rodar o próximo. Depois de instalar uma CLI, **feche e abra o PowerShell** para o PATH novo valer.
+> Dica: durante instalações e logins, espere cada comando terminar antes de rodar o próximo. Depois de instalar uma CLI, **abra um terminal novo** para o PATH valer.
 
 ---
 
 ## Passo 1. Pré-requisitos
 
+**macOS**
+
+1. **Git** (vem com as Command Line Tools): `xcode-select --install` se `git --version` falhar.
+2. **Homebrew** (recomendado): <https://brew.sh>.
+3. (Opcional) **GitHub CLI**: `brew install gh` e depois `gh auth login`.
+
+**Windows**
+
 1. **Git for Windows**: <https://git-scm.com/download/win>. O Claude Code usa o Bash que vem com ele.
 2. **Node.js 22 ou mais novo**: <https://nodejs.org>.
-3. (Opcional) **GitHub CLI**, para clonar este repositório: `winget install GitHub.cli` e depois `gh auth login`.
+3. (Opcional) **GitHub CLI**: `winget install GitHub.cli` e depois `gh auth login`.
 
 Confira:
 
-```powershell
+```
 git --version
-node --version
 ```
 
 ## Passo 2. Instalar o Orca
 
-1. Baixe e rode o [instalador do Orca para Windows](https://github.com/stablyai/orca/releases/latest/download/orca-windows-setup.exe).
-2. Abra o Orca e vá em **Settings > General > Orca CLI > Register**. Isso coloca o comando `orca` no PATH.
-3. Num PowerShell novo, confira com `orca --version`.
+**macOS**
+
+```bash
+brew install --cask stablyai/orca/orca
+```
+
+Ou baixe o DMG: [Apple Silicon](https://github.com/stablyai/orca/releases/latest/download/orca-macos-arm64.dmg) · [Intel](https://github.com/stablyai/orca/releases/latest/download/orca-macos-x64.dmg).
+
+**Windows**
+
+Baixe e rode o [instalador do Orca para Windows](https://github.com/stablyai/orca/releases/latest/download/orca-windows-setup.exe).
+
+Nos dois sistemas:
+
+1. Abra o Orca e vá em **Settings > General > Orca CLI > Register**. Isso coloca o comando `orca` no PATH.
+2. Num terminal novo, confira com `orca --version`.
+
+No Mac, se `orca --version` falhar (symlink quebrado em `/usr/local/bin/orca`), o binário real está em `/Applications/Orca.app/Contents/Resources/bin/orca`. O `scripts/instalar.sh` acha esse caminho sozinho.
 
 ## Passo 3. Instalar as CLIs das IAs
 
-Rode um comando por vez, todos no PowerShell:
+Rode um comando por vez.
 
-| IA | Instalação | Conferir |
-|---|---|---|
-| Claude Code | `irm https://claude.ai/install.ps1 \| iex` | `claude --version` |
-| Codex | `powershell -ExecutionPolicy ByPass -c "irm https://chatgpt.com/codex/install.ps1 \| iex"` | `codex --version` |
-| Cursor CLI | `irm 'https://cursor.com/install?win32=true' \| iex` | `cursor-agent --version` |
-| Grok (Grok Build, xAI) | `irm https://x.ai/cli/install.ps1 \| iex` | `grok --version` |
-| Antigravity CLI (Google) | `irm https://antigravity.google/cli/install.ps1 \| iex` | `agy --version` |
-| Muse Code (Meta) | `irm https://dev.meta.ai/install.ps1 \| iex` | `muse --version` |
+| IA | macOS / Linux | Windows (PowerShell) | Conferir |
+|---|---|---|---|
+| Claude Code | `curl -fsSL https://claude.ai/install.sh \| bash` | `irm https://claude.ai/install.ps1 \| iex` | `claude --version` |
+| Codex | `curl -fsSL https://chatgpt.com/codex/install.sh \| sh` | `powershell -ExecutionPolicy ByPass -c "irm https://chatgpt.com/codex/install.ps1 \| iex"` | `codex --version` |
+| Cursor CLI | `curl https://cursor.com/install -fsS \| bash` | `irm 'https://cursor.com/install?win32=true' \| iex` | `cursor-agent --version` |
+| Grok (Grok Build, xAI) | `curl -fsSL https://x.ai/cli/install.sh \| bash` | `irm https://x.ai/cli/install.ps1 \| iex` | `grok --version` |
+| Antigravity CLI (Google) | `curl -fsSL https://antigravity.google/cli/install.sh \| bash` | `irm https://antigravity.google/cli/install.ps1 \| iex` | `agy --version` |
+| Muse Code (Meta) | `curl -fsSL https://dev.meta.ai/install.sh \| bash` | `irm https://dev.meta.ai/install.ps1 \| iex` | `muse --version` |
 
 Observações:
 
-- **Cursor e Grok usam o mesmo nome `agent`.** O Grok instala um `agent.exe`, então no terminal `agent` abre o Grok. Para o Cursor use sempre `cursor-agent` (é esse nome que o Orca chama).
+- **Cursor e Grok no Windows usam o mesmo nome `agent`.** O Grok instala um `agent.exe`, então no terminal `agent` abre o Grok. Para o Cursor use sempre `cursor-agent` (é esse nome que o Orca chama).
+- **No Mac a CLI do Cursor instala como `agent`.** Se `cursor-agent --version` falhar depois do install, e `agent --help` for o Cursor (não o Grok), crie o apelido: `ln -s "$HOME/.local/bin/agent" "$HOME/.local/bin/cursor-agent"`.
 - **Gemini CLI não entra.** Desde junho de 2026 o Gemini CLI não aceita mais login de conta Google pessoal, só API key. O acesso ao Google é feito pelo **Antigravity CLI**, que usa o login da conta Google.
 
 ## Passo 4. Fazer login em cada IA (pelo navegador)
@@ -68,7 +91,17 @@ Se o login do Grok cair (acontece quando o token expira), é só rodar `grok log
 
 ## Passo 6. Instalar as skills e as regras da equipe
 
-Clone este repositório e rode o script:
+Clone este repositório e rode o script do seu sistema:
+
+**macOS / Linux**
+
+```bash
+git clone https://github.com/bentoneto7/orca-skills.git
+cd orca-skills
+bash scripts/instalar.sh
+```
+
+**Windows**
 
 ```powershell
 cd $HOME\Documents
@@ -84,10 +117,10 @@ O que o script faz (pode rodar de novo quando quiser, ele não duplica nada):
 
    | IA | Pasta de skills |
    |---|---|
-   | Claude | `~\.claude\skills` |
-   | Codex e Cursor | `~\.agents\skills` (compartilhada), além de `~\.codex\skills` e `~\.cursor\skills` |
-   | Grok | `~\.grok\skills` |
-   | Antigravity CLI | `~\.gemini\antigravity-cli\skills` |
+   | Claude | `~/.claude/skills` |
+   | Codex e Cursor | `~/.agents/skills` (compartilhada), além de `~/.codex/skills` e `~/.cursor/skills` |
+   | Grok | `~/.grok/skills` |
+   | Antigravity CLI | `~/.gemini/antigravity-cli/skills` |
    | Muse | instalada com `muse skills install --scope user` |
 
 3. Acrescenta no fim da skill `orchestration` do Orca a seção "Equipe Zuuuw", que manda carregar a `orquestration` sempre que o Orca orquestra.
@@ -95,25 +128,25 @@ O que o script faz (pode rodar de novo quando quiser, ele não duplica nada):
 
    | IA | Arquivo de instruções globais |
    |---|---|
-   | Claude | `~\.claude\CLAUDE.md` |
-   | Codex | `~\.codex\AGENTS.md` |
-   | Grok | `~\.grok\rules\orca-equipe.md` |
-   | Cursor | `~\.cursor\rules\orca-equipe.mdc` |
-   | Antigravity | `~\.gemini\GEMINI.md` |
-   | Muse | `~\.config\muse\AGENTS.md` |
+   | Claude | `~/.claude/CLAUDE.md` |
+   | Codex | `~/.codex/AGENTS.md` |
+   | Grok | `~/.grok/rules/orca-equipe.md` |
+   | Cursor | `~/.cursor/rules/orca-equipe.mdc` |
+   | Antigravity | `~/.gemini/GEMINI.md` |
+   | Muse | `~/.config/muse/AGENTS.md` |
 
    Nos arquivos que já existem, o script só troca o trecho entre `<!-- orca-equipe:inicio -->` e `<!-- orca-equipe:fim -->` e guarda uma cópia `.bak-orca` antes da primeira alteração.
 
 ## Passo 7. Configuração do Grok
 
-O Grok já fica pronto com o passo 6 (skills em `~\.grok\skills` e regras em `~\.grok\rules`, que ele carrega em todo projeto). Ajustes recomendados:
+O Grok já fica pronto com o passo 6 (skills em `~/.grok/skills` e regras em `~/.grok/rules`, que ele carrega em todo projeto). Ajustes recomendados:
 
-1. Abra `~\.grok\config.toml` e compare com [`config/grok-config.toml.example`](../config/grok-config.toml.example). Mescle só o que quiser. Não substitua o arquivo inteiro, porque ele guarda outras configurações suas.
+1. Abra `~/.grok/config.toml` e compare com [`config/grok-config.toml.example`](../config/grok-config.toml.example). Mescle só o que quiser. Não substitua o arquivo inteiro, porque ele guarda outras configurações suas.
    - `permission_mode = "auto"` pede confirmação só para ações arriscadas.
    - `default_reasoning_effort = "high"` gasta menos que `xhigh` e já basta para revisão e pesquisa.
 2. **Grok como worker do Orca:** a ajuda do Orca não lista o Grok entre os ids de agente do `worker-start`. A skill já prevê isso: se o `--agent grok` for recusado, o coordenador abre uma worktree com o Grok assim:
 
-   ```powershell
+   ```
    orca worktree create --name revisao-grok --agent grok --prompt "<tarefa>"
    ```
 
@@ -125,13 +158,13 @@ O Grok já fica pronto com o passo 6 (skills em `~\.grok\skills` e regras em `~\
 2. **Feche as sessões abertas** de cada agente e abra novas. Sessões antigas não carregam as skills novas. Só reinicie o Orca se, mesmo assim, algum agente não reconhecer a `/orquestration`.
 3. Rode a verificação:
 
-   ```powershell
-   powershell -ExecutionPolicy Bypass -File .\scripts\instalar.ps1 -Verificar
-   ```
+   macOS / Linux: `bash scripts/instalar.sh --verificar`
+
+   Windows: `powershell -ExecutionPolicy Bypass -File .\scripts\instalar.ps1 -Verificar`
 
    Ela lista quais CLIs estão no PATH, quais skills cada IA tem, se as regras foram gravadas e a cota do Claude e do Codex.
 
-> Sobre o aviso **"Review skill"** em Settings > Orchestration: ele aparece porque a skill `orchestration` foi alterada (a seção "Equipe Zuuuw"). Não é erro. **Não clique em Update** ali, porque isso reinstala a skill original e apaga a ligação. Se clicar sem querer, rode o `instalar.ps1` de novo.
+> Sobre o aviso **"Review skill"** em Settings > Orchestration: ele aparece porque a skill `orchestration` foi alterada (a seção "Equipe Zuuuw"). Não é erro. **Não clique em Update** ali, porque isso reinstala a skill original e apaga a ligação. Se clicar sem querer, rode o instalador de novo (`instalar.sh` ou `instalar.ps1`).
 
 ## Passo 9. Usar no dia a dia
 
@@ -158,9 +191,11 @@ Configuração concluída.
 
 | Sintoma | Solução |
 |---|---|
-| `orca`, `agy` ou outra CLI "não reconhecido" | Feche e abra o PowerShell. No caso do `orca`, refaça **Settings > General > Orca CLI > Register**. |
-| `agent` abre o Grok em vez do Cursor | Normal. Use `cursor-agent`. |
+| `orca`, `agy` ou outra CLI "não reconhecido" | Abra um terminal novo. No caso do `orca`, refaça **Settings > General > Orca CLI > Register**. |
+| `orca --version` falha no Mac | Use `/Applications/Orca.app/Contents/Resources/bin/orca --version`. O `instalar.sh` já resolve esse caminho. |
+| `cursor-agent` não encontrado no Mac | A CLI do Cursor instala como `agent`. Se `agent --help` for o Cursor: `ln -s "$HOME/.local/bin/agent" "$HOME/.local/bin/cursor-agent"`. |
+| `agent` abre o Grok em vez do Cursor | Normal no Windows. Use `cursor-agent`. |
 | Grok pede login de novo | `grok login` (ou `grok login --device-auth`). |
 | Gemini pede API key | Desative o Gemini no Orca e use o Antigravity. |
-| Agente não reconhece `/orquestration` | Refresh em Settings > Agents, abra uma sessão nova e rode o `instalar.ps1 -Verificar`. |
-| Atualizou a skill do Orca e a ligação sumiu | Rode `instalar.ps1` de novo. |
+| Agente não reconhece `/orquestration` | Refresh em Settings > Agents, abra uma sessão nova e rode `bash scripts/instalar.sh --verificar` (Mac) ou `instalar.ps1 -Verificar` (Windows). |
+| Atualizou a skill do Orca e a ligação sumiu | Rode o instalador de novo. |

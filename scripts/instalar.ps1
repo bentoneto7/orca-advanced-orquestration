@@ -1,5 +1,6 @@
 <#
   orca-skills - instala as skills e as regras da equipe em todas as IAs (Windows / PowerShell 5.1+)
+  macOS / Linux: bash scripts/instalar.sh
 
   Uso (na pasta do repositorio):
     powershell -ExecutionPolicy Bypass -File .\scripts\instalar.ps1            # instala / atualiza

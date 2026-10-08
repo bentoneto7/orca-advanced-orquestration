@@ -4,9 +4,20 @@ Equipe de seis IAs trabalhando juntas no [Orca](https://github.com/stablyai/orca
 
 **Tutorial completo, do passo 1 até a configuração concluída: [docs/TUTORIAL.md](docs/TUTORIAL.md).**
 
-## Instalação rápida (Windows)
+## Instalação rápida
 
 Com o Orca e as CLIs já instalados e logados:
+
+**macOS / Linux**
+
+```bash
+git clone https://github.com/bentoneto7/orca-skills.git
+cd orca-skills
+bash scripts/instalar.sh
+bash scripts/instalar.sh --verificar
+```
+
+**Windows**
 
 ```powershell
 gh repo clone bentoneto7/orca-skills
@@ -28,7 +39,8 @@ Depois, no Orca: **Settings > Agents > Refresh** e abra uma sessão nova de cada
 | `config/cursor-rules-orca-equipe.mdc` | As mesmas regras no formato do Cursor (`~/.cursor/rules/`). |
 | `config/grok-config.toml.example` | Trecho sugerido para o `~/.grok/config.toml`. |
 | `config/orchestration-hook.md` | A seção "Equipe Zuuuw" que o script acrescenta na skill do Orca. |
-| `scripts/instalar.ps1` | Instala tudo em todas as IAs (`-Verificar` só confere). |
+| `scripts/instalar.sh` | Instala tudo em todas as IAs no macOS/Linux (`--verificar` só confere). |
+| `scripts/instalar.ps1` | O mesmo no Windows (`-Verificar` só confere). |
 
 ## Uso
 
