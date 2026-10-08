@@ -14,7 +14,7 @@ Equipe de seis IAs trabalhando juntas no [Orca](https://github.com/stablyai/orca
 - **Revisão cruzada sem viés.** Toda entrega é revisada por uma IA de outro fornecedor, que não sabe quem fez.
 - **Gestão de créditos com balanço saudável.** A cota real de cada IA é lida antes de cada onda, sem gastar tokens. Quem tem mais folga recebe mais trabalho, quem está adiantado no consumo da janela recebe menos, e Claude e Codex guardam 15% para revisão crítica.
 - **Redistribuição automática.** Se uma IA bate o limite no meio do trabalho, a tarefa passa na hora para a próxima com folga, e a IA sem cota fica de fora até o reset.
-- **Desbloqueio total com travas fixas.** Os agentes executam sem pedir aprovação, e Claude e Codex agem no Chrome sozinhos. Merge na main, deploy, produção, dados reais e segredos ficam prontos, mas listados em "Pendente de aprovação" para você decidir.
+- **Autonomia 100%.** Os sub-agentes executam tudo sem pedir confirmação, e Claude e Codex agem no Chrome sozinhos. Só main, deploy e produção ficam num PR pronto no relatório.
 - **Economia de tokens.** Respostas de até 15 linhas, handoffs curtos e o modelo mais barato que resolve cada tarefa.
 - **Instaladores para macOS, Linux e Windows.** Um comando instala e confere tudo em todas as IAs.
 
@@ -22,11 +22,13 @@ Equipe de seis IAs trabalhando juntas no [Orca](https://github.com/stablyai/orca
 
 ![Gestão de créditos](docs/img/gestao-de-creditos.png)
 
-## Desbloqueio total, com travas fixas
+## Autonomia 100%
 
-As IAs foram desbloqueadas: rodam sem pedir aprovação e obedecem 100% ao coordenador. O Chrome também: o Claude usa a extensão Claude in Chrome em modo automático e o Codex tem os plugins `chrome`, `browser` e `computer-use`, então os dois navegam, clicam e testam páginas sozinhos. A rede de segurança são 7 travas fixas que nenhuma IA executa, nem no Chrome: merge ou push na main, deploy, ação em produção, apagar ou alterar dados reais, migração em banco real, segredos e apagar arquivos fora da worktree. Nesses pontos a IA deixa pronto (branch, PR, comando) e lista em "Pendente de aprovação", e você aprova tudo num só lugar no fim. Detalhes em [docs/IDEIA.md](docs/IDEIA.md#desbloqueio-total-com-travas-fixas).
+**Os sub-agentes executam tudo sozinhos, sem confirmação.** Cada IA roda no Orca com os argumentos que dispensam aprovação, obedece 100% ao coordenador e nunca pergunta ao usuário. Os gates de rotina são resolvidos pelo próprio coordenador. O Chrome também está no automático: o Claude usa a extensão Claude in Chrome em modo automático e o Codex tem os plugins `chrome`, `browser` e `computer-use`, então os dois navegam, clicam e testam páginas sem pedir cada clique. Nada para a rodada, do pedido à entrega. Detalhes em [docs/IDEIA.md](docs/IDEIA.md#autonomia-100).
 
-![Desbloqueio total, com travas fixas](docs/img/travas.png)
+![Autonomia 100%](docs/img/autonomia.png)
+
+<sub>Única exceção, por segurança: merge na main, deploy, produção, dados reais, migração em banco real e segredos ficam prontos num PR ou comando no relatório final. O trabalho nunca para.</sub>
 
 ## Como fica no Orca
 

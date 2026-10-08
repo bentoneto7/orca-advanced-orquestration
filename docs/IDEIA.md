@@ -29,7 +29,7 @@ Os pilares da ideia:
 
 1. **Paralelismo.** Até 6 workers ao mesmo tempo, cada um na própria git worktree. Com **Nested worker depth = 2**, um worker com tarefa grande ainda pode abrir até 2 subagentes de apoio.
 2. **Claude e Codex como dupla principal.** O trabalho pesado fica com quem dos dois tiver mais folga. Cursor, Grok e Muse pegam partes reais de implementação, não só sobras.
-3. **Desbloqueio total com travas fixas.** As IAs rodam sem pedir aprovação, obedecem ao coordenador e, com o Chrome desbloqueado, agem no navegador sozinhas. O que é arriscado fica pronto e vai para "Pendente de aprovação" (veja [Desbloqueio total, com travas fixas](#desbloqueio-total-com-travas-fixas)).
+3. **Autonomia 100%.** Os sub-agentes executam tudo sozinhos, sem nenhuma confirmação: obedecem ao coordenador, nunca perguntam ao usuário e, com o Chrome desbloqueado, agem no navegador sem pedir cada clique. Você não precisa acompanhar nada (veja [Autonomia 100%](#autonomia-100)).
 4. **Revisão cruzada.** O trabalho de uma IA é revisado por uma IA de outro fornecedor.
 5. **Gestão de créditos.** A divisão segue a cota real de cada IA e o ritmo de gasto, para nenhuma esgotar antes do reset.
 6. **Economia de tokens.** Handoffs curtos, regras compactas e nada de reler arquivos grandes.
@@ -52,7 +52,6 @@ flowchart LR
     PL --> W6[Claude]
     W1 & W2 & W3 & W4 & W5 & W6 --> R[Revisão cruzada<br/>outro fornecedor]
     R --> F[Relatório final<br/>+ bloco Créditos]
-    F --> A[Pendente de aprovação]
     Q -. antes de cada onda .-> PL
 ```
 
@@ -65,7 +64,7 @@ Passo a passo:
 5. **Ondas em paralelo.** As tasks de cada onda saem juntas, cada uma na sua worktree. `--deps` segura só o que depende de outra entrega. Tasks marcadas `[expansivel]` podem abrir até 2 subagentes.
 6. **Rebalanceamento.** Antes de cada onda, as cotas são lidas de novo e a divisão é ajustada.
 7. **Revisão cruzada.** Cada entrega é revisada por uma IA de outro fornecedor, que não sabe quem fez e aponta erros em vez de elogiar.
-8. **Relatório.** No fim vem o que foi feito, por qual IA, as decisões tomadas, o bloco Créditos e a lista "Pendente de aprovação".
+8. **Entregue.** A rodada vai do pedido à entrega sem nenhuma parada para confirmação. O relatório final traz o que foi feito, por qual IA, as decisões tomadas e o bloco Créditos.
 
 ### O plano, no formato da skill
 
@@ -88,7 +87,7 @@ Print real da janela do Orca, recortado para mostrar só a estrutura. Cada task 
 - **Sem ponto único de falha.** Se uma IA bate o limite, cai o login ou trava, a tarefa passa na hora para a próxima com folga. O trabalho continua.
 - **Menos viés.** Quem revisa é de outro fornecedor, treinado de outro jeito. Erros que passariam despercebidos pela mesma IA que escreveu têm mais chance de aparecer.
 - **Forças combinadas.** Cada IA faz o que faz melhor: Codex e Claude no pesado, Cursor na interface, Grok na pesquisa e na crítica, Antigravity na leitura ampla do código, Muse nas partes fechadas.
-- **Desbloqueio.** Ninguém para esperando você aprovar passo de rotina ou clique no Chrome. Você só decide o que realmente importa: merge, deploy, produção e dados reais.
+- **Autonomia 100%.** Nenhum sub-agente para esperando confirmação, nem para clicar no Chrome. O trabalho flui do pedido à entrega enquanto você faz outra coisa.
 
 > **Exemplo (ilustrativo):** numa feature com front-end, back-end e testes, uma IA sozinha faria pesquisa, back-end, front-end, testes e revisão em sequência. Na equipe, o Antigravity mapeia o código e o Grok pesquisa ao mesmo tempo. Depois o Codex faz o back-end enquanto o Cursor faz a interface, e cada um revisa o trabalho do outro.
 
@@ -114,78 +113,63 @@ Leitura real feita no PC em 08/10, às 19:08. Repare que ela confirma a ideia: o
 
 ![Saída real do cotas.mjs e do Orca](img/print-cotas.png)
 
-## Desbloqueio total, com travas fixas
+## Autonomia 100%
 
 > [!IMPORTANT]
-> O ganho de eficiência vem do **desbloqueio**: as IAs executam sem pedir aprovação e, com o Chrome desbloqueado, navegam e agem no navegador sozinhas. A segurança fica com **7 travas fixas** que nenhuma IA executa, nem com ordem do coordenador. Nesses pontos o trabalho fica pronto e vai para uma única lista, **"Pendente de aprovação"**, que você aprova no fim.
+> **Os sub-agentes executam tudo sozinhos, sem confirmação.** Eles obedecem 100% ao coordenador, nunca perguntam ao usuário e nada para a rodada. Você faz o pedido e recebe a entrega.
 
-![Desbloqueio total, com travas fixas](img/travas.png)
+![Autonomia 100%](img/autonomia.png)
 
-A estrutura tem duas camadas: o desbloqueio, que dá velocidade, e as travas, que são a rede de segurança.
+```mermaid
+flowchart LR
+    P[Pedido] --> C[Coordenador]
+    C --> S[Sub-agentes executam<br/>em paralelo, sem confirmação]
+    S --> R[Revisão cruzada]
+    R --> E[Entregue]
+```
 
-### Camada 1: desbloqueio das IAs
+### IAs desbloqueadas
 
-- **Sem pedidos de aprovação.** No Orca, cada agente roda com os argumentos que dispensam confirmação:
+No Orca, cada agente roda com os argumentos que dispensam qualquer confirmação:
 
-  | IA | Argumento |
-  |---|---|
-  | Claude | `--dangerously-skip-permissions` |
-  | Codex | `--dangerously-bypass-approvals-and-sandbox` |
-  | Cursor | `--yolo` |
-  | Grok | `--permission-mode bypassPermissions` |
-  | Antigravity | `--dangerously-skip-permissions` |
-  | Muse | `--yolo` |
+| IA | Argumento |
+|---|---|
+| Claude | `--dangerously-skip-permissions` |
+| Codex | `--dangerously-bypass-approvals-and-sandbox` |
+| Cursor | `--yolo` |
+| Grok | `--permission-mode bypassPermissions` |
+| Antigravity | `--dangerously-skip-permissions` |
+| Muse | `--yolo` |
 
-- **Obediência ao coordenador.** Os workers obedecem 100% ao coordenador e nunca param para perguntar ao usuário, porque você não acompanha os workers.
-- **Dúvida vai ao coordenador.** Dúvida de escopo vira `orca orchestration ask`. Sem resposta, o worker escolhe a opção mais segura e reversível, registra e segue.
-- **Gates de rotina resolvidos na hora.** Arquitetura, refatoração, apagar código dentro da worktree ou criar uma migração nova: o coordenador decide sozinho e registra a decisão no board com `gate-create` + `gate-resolve`.
+### O coordenador manda
 
-### Camada 1: desbloqueio do Chrome
+- **Obediência total.** Os sub-agentes obedecem 100% ao coordenador e executam sem pedir aprovação ou confirmação a ninguém.
+- **Nunca perguntam ao usuário.** Você não acompanha os sub-agentes, então ninguém para esperando você. Dúvida de escopo vai ao coordenador com `orca orchestration ask`; sem resposta, o sub-agente escolhe a opção mais segura e reversível, registra e segue.
+- **Gates de rotina resolvidos pelo próprio coordenador.** Arquitetura, refatoração, apagar código dentro da worktree ou criar uma migração nova: ele decide sozinho, registra no board com `gate-create` + `gate-resolve` e segue.
 
-O navegador também foi desbloqueado, para os agentes trabalharem na web sem pedir cada clique:
+### Chrome desbloqueado
+
+O navegador também roda no automático, sem pedir cada clique:
 
 - **Claude:** a extensão **Claude in Chrome** está instalada, é ativada sozinha e abre em modo automático.
 - **Codex:** os plugins `chrome`, `browser` e `computer-use` estão ligados na configuração do Codex.
 - **Orca:** o acesso remoto ao navegador está habilitado.
 
-Com isso, Claude e Codex abrem, leem e agem no seu Chrome sozinhos: navegam, clicam, testam páginas e conferem a interface publicada. Tarefas de navegador, como QA visual, pesquisa e testes de interface, andam sem você aprovar clique por clique. Hoje são o Claude e o Codex que têm esse acesso ao Chrome; as outras IAs trabalham pelo terminal.
+Com isso, Claude e Codex abrem, leem e agem no seu Chrome sozinhos: navegam, clicam, testam páginas e conferem a interface publicada. QA visual, pesquisa e testes de interface andam sem nenhuma confirmação. Hoje são o Claude e o Codex que têm esse acesso ao Chrome; as outras IAs trabalham pelo terminal.
 
-### Camada 2: travas fixas
+### Por que isso rende tanto
 
-Nenhuma IA executa estas ações, nem com ordem do coordenador. As mesmas travas valem para o que os agentes fazem no Chrome:
-
-1. merge ou push na `main`;
-2. deploy;
-3. ação em produção;
-4. apagar ou alterar dados reais;
-5. rodar migração em banco real;
-6. mexer em segredos ou credenciais;
-7. apagar arquivos fora da worktree.
-
-### O que acontece numa trava
-
-```mermaid
-flowchart TD
-    T[Tarefa ou ação] --> Q{É uma trava?}
-    Q -- não --> E[Executa sozinho<br/>e registra no board]
-    Q -- sim --> P[Prepara tudo:<br/>branch + PR + comando exato]
-    P --> L[Pendente de aprovação<br/>no relatório final]
-    L --> V[Você aprova<br/>num só lugar]
-```
-
-Ao chegar numa trava, a IA não para o resto do trabalho. Ela deixa pronto o que for preciso (a branch, o PR ou o comando exato) e lista em "Pendente de aprovação" no relatório final. Você revisa e aprova tudo num lugar só.
-
-### Por que essa estrutura é boa
-
-- **Velocidade sem babá.** Ninguém espera você aprovar passo de rotina nem clique no navegador. As ondas andam em paralelo enquanto você faz outra coisa.
-- **Risco concentrado numa lista.** Tudo o que pode causar estrago real chega numa única lista, já preparado. Você não precisa vigiar seis IAs, só ler essa lista.
+- **Nada para a rodada.** Sem confirmações no caminho, as ondas andam em paralelo do começo ao fim.
+- **Você fica livre.** Não precisa vigiar seis IAs nem aprovar passo a passo.
 - **Decisões rastreáveis.** O que o coordenador decide sozinho fica registrado no board e aparece no relatório em "Decisões tomadas sozinho".
-- **Reversível por construção.** Cada worker trabalha na própria worktree e branch. Até a `main` receber o merge que você aprovou, qualquer coisa pode ser descartada.
-- **Nenhuma IA é o elo fraco.** O instalador grava as mesmas regras nas instruções globais de todas: `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`, `~/.gemini/GEMINI.md` (Antigravity), `~/.config/muse/AGENTS.md`, `~/.grok/rules/orca-equipe.md` e `~/.cursor/rules/orca-equipe.mdc`. Qualquer uma, coordenando ou como worker, segue as mesmas travas.
+- **Reversível por construção.** Cada sub-agente trabalha na própria worktree e branch, então qualquer coisa pode ser descartada.
+- **Mesma regra em todas as IAs.** O instalador grava as mesmas instruções em todas: `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`, `~/.gemini/GEMINI.md` (Antigravity), `~/.config/muse/AGENTS.md`, `~/.grok/rules/orca-equipe.md` e `~/.cursor/rules/orca-equipe.mdc`. Qualquer uma, coordenando ou como sub-agente, trabalha do mesmo jeito.
 
-O relatório final, no formato da skill, junta tudo isso: o que cada IA fez, o que ficou para você aprovar e o bloco Créditos.
+O relatório final, no formato da skill, mostra o que cada IA fez e o bloco Créditos:
 
 ![Formato do relatório final da /orquestration](img/print-relatorio.png)
+
+**Única exceção, por segurança.** A skill mantém alguns limites fixos (seção 9 do `SKILL.md`): merge ou push na `main`, deploy, ação em produção, apagar ou alterar dados reais, rodar migração em banco real, mexer em segredos e apagar arquivos fora da worktree. Nesses casos o sub-agente não para: deixa pronto o PR, a branch ou o comando e lista no relatório final, em "Pendente de aprovação". O resto do trabalho segue normalmente.
 
 ## Como começar
 
