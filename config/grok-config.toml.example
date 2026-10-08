@@ -1,13 +1,17 @@
-# Trecho sugerido para ~/.grok/config.toml (mescle com o que ja existe; nao substitua o arquivo inteiro)
+# Trecho para ~/.grok/config.toml, igual ao Grok configurado no PC de referencia.
+# Mescle com o que ja existe; nao substitua o arquivo inteiro.
 
 [ui]
 # "auto" pede confirmacao so para acoes arriscadas. Use "default" para confirmar tudo.
 permission_mode = "auto"
 yolo = false
+compact_mode = false
+max_thoughts_width = 120
+fork_secondary_model = "grok-4.6"
 
 [models]
 default = "grok-4.6"
-default_reasoning_effort = "high"   # "xhigh" gasta mais; "high" equilibra custo e qualidade como worker
+default_reasoning_effort = "xhigh"   # "high" economiza tokens se o Grok estiver so como worker
 
 # As regras em ~/.grok/rules/*.md ja carregam em todo projeto, sem configurar nada.
 # Se quiser guardar as regras da equipe em outra pasta:
