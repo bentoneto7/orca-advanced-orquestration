@@ -4,6 +4,8 @@ Equipe de seis IAs trabalhando juntas no [Orca](https://github.com/stablyai/orca
 
 **Tutorial completo, do passo 1 até a configuração concluída: [docs/TUTORIAL.md](docs/TUTORIAL.md).**
 
+**Entenda a ideia completa, a dinâmica e por que é mais eficiente: [docs/IDEIA.md](docs/IDEIA.md).**
+
 ## Principais benefícios
 
 ![Dinâmica da equipe](docs/img/dinamica.png)
@@ -19,6 +21,14 @@ Equipe de seis IAs trabalhando juntas no [Orca](https://github.com/stablyai/orca
 ![Benefícios](docs/img/beneficios.png)
 
 ![Gestão de créditos](docs/img/gestao-de-creditos.png)
+
+## Como fica no Orca
+
+Print real do Orca rodando a `/orquestration` (recortado) e a leitura de cotas feita antes de cada onda, sem gastar tokens. Mais prints e o formato do plano e do relatório em [docs/IDEIA.md](docs/IDEIA.md).
+
+![Print real do Orca rodando a /orquestration](docs/img/print-orca-real.png)
+
+![Saída real do cotas.mjs](docs/img/print-cotas.png)
 
 ## Instalação rápida
 
