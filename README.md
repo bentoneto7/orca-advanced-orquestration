@@ -1,6 +1,6 @@
 # orca-skills
 
-Equipe de seis IAs trabalhando juntas no [Orca](https://github.com/stablyai/orca), com balanceamento de tokens: **Claude** e **Codex** alternam o trabalho pesado conforme a cota de cada um, e **Cursor, Grok, Antigravity e Muse** pegam as subtarefas. Qualquer uma pode coordenar ou ser subagente, e as tarefas independentes rodam em paralelo.
+Equipe de seis IAs trabalhando juntas no [Orca](https://github.com/stablyai/orca), com balanceamento de tokens: **Claude** e **Codex** alternam o trabalho pesado conforme a cota de cada um, e **Cursor, Grok, Antigravity e Muse** pegam as subtarefas. Ao chamar `/orquestration`, a tarefa é quebrada automaticamente entre todas as seis IAs, em ondas paralelas, com expansão de subagentes. Qualquer uma pode coordenar ou ser subagente.
 
 **Tutorial completo, do passo 1 até a configuração concluída: [docs/TUTORIAL.md](docs/TUTORIAL.md).**
 

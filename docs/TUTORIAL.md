@@ -87,7 +87,7 @@ Se o login do Grok cair (acontece quando o token expira), é só rodar `grok log
 2. **Desative o Gemini** nessa tela, se ele aparecer.
 3. **Agent Permissions**: o padrão do Orca é "Yolo" (os agentes executam sem pedir confirmação). Se preferir confirmar cada ação, mude para **Manual**.
 4. Ao abrir o Orca pela primeira vez, aceite importar as contas de `~/.claude` e `~/.codex`. Só essas duas mostram consumo de cota no Orca, e é com essa informação que a skill decide quem pega o trabalho pesado.
-5. Em **Settings > Orchestration**, deixe **Nested worker depth = 1**: o coordenador cria workers, e os workers não criam outros.
+5. Em **Settings > Orchestration**, coloque **Nested worker depth = 2**. Assim o coordenador cria workers, e um worker com tarefa grande pode abrir até 2 subagentes de apoio. Com 1, só o coordenador cria workers e a skill quebra tudo sozinha.
 
 ## Passo 6. Instalar as skills e as regras da equipe
 
@@ -177,8 +177,8 @@ Abra uma sessão do **Claude** ou do **Codex** no projeto, pelo Orca, e peça:
 O coordenador então:
 
 1. Confere a cota do Claude e do Codex (`orca account list --json`). Quem estiver com menos uso na semana coordena e o outro pega a implementação pesada. A diferença de uso semanal entre os dois fica em até 15 pontos.
-2. Divide o trabalho no board: implementação pesada com Claude/Codex, pesquisa e leitura do código com o Antigravity, pesquisa na web e revisão crítica com o Grok, front-end com o Cursor, tarefas pequenas com o Muse.
-3. Dispara em paralelo as tarefas que não dependem uma da outra (até 4 ao mesmo tempo, cada uma na própria worktree) e usa `--deps` para as que precisam esperar outra.
+2. Quebra a tarefa sozinho, sem perguntar, e monta um plano com IDs (T1, T2, T4.1...) em que **todas as seis IAs recebem pelo menos uma tarefa**: implementação pesada com Claude/Codex, pesquisa e leitura do código com o Antigravity, pesquisa na web e revisão crítica com o Grok, front-end com o Cursor, tarefas pequenas com o Muse. O plano termina com uma linha "Cobertura" mostrando o que cada IA pegou.
+3. Dispara em ondas: as tarefas de cada onda saem juntas (até 6 ao mesmo tempo, uma por IA, cada uma na própria worktree) e `--deps` segura as que precisam esperar outra. Tarefas grandes marcadas `[expansivel]` podem abrir até 2 subagentes de apoio.
 4. Manda cada entrega para revisão por uma IA de outro fornecedor, sem dizer quem fez.
 5. Para e pergunta a você antes de: mudança de arquitetura, apagar código ou dados, migração de banco, merge na main, deploy ou produção.
 6. Termina com um relatório curto, incluindo o uso semanal do Claude e do Codex.
