@@ -88,14 +88,13 @@ PY
 }
 
 add_hook() {
-  local skill_file="$1"
+  # Grava (ou troca) a secao "Equipe Zuuuw" no fim da skill do Orca.
+  local skill_file="$1" base
   [[ -f "$skill_file" ]] || return 1
-  if grep -q 'Equipe Zuuuw' "$skill_file"; then
-    return 0
-  fi
   backup_once "$skill_file"
-  printf '\n' >> "$skill_file"
-  cat "$REPO/config/orchestration-hook.md" >> "$skill_file"
+  base="$(tr -d '\r' < "$skill_file" | awk '/^## Equipe Zuuuw/{exit} {print}')"
+  printf '%s\n' "$base" > "$skill_file"
+  tr -d '\r' < "$REPO/config/orchestration-hook.md" >> "$skill_file"
   return 0
 }
 
@@ -175,8 +174,10 @@ if [[ "$VERIFICAR" -eq 1 ]]; then
   done
   printf "  %-12s %s\n" "grok"   "$( [[ -f "$GROK_RULE" ]] && echo OK || echo falta )"
   printf "  %-12s %s\n" "cursor" "$( [[ -f "$CURSOR_RULE" ]] && echo OK || echo falta )"
-  echo "== Contas com cota (orca account list)"
-  if [[ -n "$ORCA" ]]; then
+  echo "== Cota de cada IA (cotas.mjs, sem gastar tokens)"
+  if command_ok node && [[ -n "$ORCA" ]]; then
+    PATH="$(dirname "$ORCA"):$PATH" node "$REPO/skills/orquestration/cotas.mjs"
+  elif [[ -n "$ORCA" ]]; then
     "$ORCA" account list 2>&1 | head -n 15
   else
     echo "  orca nao encontrado"

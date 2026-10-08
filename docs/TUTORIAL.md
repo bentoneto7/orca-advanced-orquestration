@@ -1,6 +1,6 @@
 # Tutorial: equipe de IAs no Orca, do zero até a configuração concluída
 
-Este passo a passo deixa seis IAs trabalhando juntas no [Orca](https://github.com/stablyai/orca): **Claude** e **Codex** como agentes principais (o trabalho pesado alterna entre os dois conforme a cota de cada um) e **Cursor, Grok, Antigravity e Muse** nas subtarefas. Qualquer uma pode coordenar ou trabalhar como subagente, e as tarefas independentes rodam em paralelo, cada uma na própria worktree.
+Este passo a passo deixa seis IAs trabalhando juntas no [Orca](https://github.com/stablyai/orca): **Claude**, **Codex**, **Cursor**, **Grok**, **Antigravity** e **Muse**, com o trabalho dividido pela cota real de cada uma (quem tem mais folga recebe mais). Qualquer uma pode coordenar ou trabalhar como subagente, e as tarefas independentes rodam em paralelo, cada uma na própria worktree.
 
 Feito para **macOS** (Terminal / zsh) e **Windows 10/11** (PowerShell). Use sempre login pelo navegador, com a sua assinatura de cada serviço, sem API key.
 
@@ -86,7 +86,7 @@ Se o login do Grok cair (acontece quando o token expira), é só rodar `grok log
 1. No Orca, abra **Settings > Agents** e clique em **Refresh**. Devem aparecer Claude, Codex, Cursor, Grok, Antigravity e Muse.
 2. **Desative o Gemini** nessa tela, se ele aparecer.
 3. **Agent Permissions**: o padrão do Orca é "Yolo" (os agentes executam sem pedir confirmação). Se preferir confirmar cada ação, mude para **Manual**.
-4. Ao abrir o Orca pela primeira vez, aceite importar as contas de `~/.claude` e `~/.codex`. Só essas duas mostram consumo de cota no Orca, e é com essa informação que a skill decide quem pega o trabalho pesado.
+4. Ao abrir o Orca pela primeira vez, aceite importar as contas de `~/.claude` e `~/.codex`. O painel Usage do Orca mostra a cota de Claude, Codex, Cursor, Grok e Antigravity, e é com essa informação que a skill divide o trabalho (o Muse não tem medidor).
 5. Em **Settings > Orchestration**, coloque **Nested worker depth = 2**. Assim o coordenador cria workers, e um worker com tarefa grande pode abrir até 2 subagentes de apoio. Com 1, só o coordenador cria workers e a skill quebra tudo sozinha.
 6. Para os workers rodarem sem pedir aprovação, confira os argumentos padrão de cada agente no Orca: Claude e Antigravity com `--dangerously-skip-permissions`, Codex com `--dangerously-bypass-approvals-and-sandbox`, Cursor com `--yolo`, Grok com `--permission-mode bypassPermissions` e Muse com `--yolo`. Mesmo assim, a `/orquestration` nunca faz merge na main, deploy, ação em produção ou mudança em dados reais: ela deixa pronto e lista em "Pendente de aprovação" no relatório final.
 
@@ -163,7 +163,7 @@ O Grok já fica pronto com o passo 6 (skills em `~/.grok/skills` e regras em `~/
 
    Windows: `powershell -ExecutionPolicy Bypass -File .\scripts\instalar.ps1 -Verificar`
 
-   Ela lista quais CLIs estão no PATH, quais skills cada IA tem, se as regras foram gravadas e a cota do Claude e do Codex.
+   Ela lista quais CLIs estão no PATH, quais skills cada IA tem, se as regras foram gravadas e a cota de cada IA.
 
 > Sobre o aviso **"Review skill"** em Settings > Orchestration: ele aparece porque a skill `orchestration` foi alterada (a seção "Equipe Zuuuw"). Não é erro. **Não clique em Update** ali, porque isso reinstala a skill original e apaga a ligação. Se clicar sem querer, rode o instalador de novo (`instalar.sh` ou `instalar.ps1`).
 
@@ -177,12 +177,12 @@ Abra uma sessão do **Claude** ou do **Codex** no projeto, pelo Orca, e peça:
 
 O coordenador então:
 
-1. Confere a cota do Claude e do Codex (`orca account list --json`). Quem estiver com menos uso na semana coordena e o outro pega a implementação pesada. A diferença de uso semanal entre os dois fica em até 15 pontos.
-2. Quebra a tarefa sozinho, sem perguntar, e monta um plano com IDs (T1, T2, T4.1...) em que **todas as seis IAs recebem pelo menos uma tarefa**: implementação pesada com Claude/Codex, pesquisa e leitura do código com o Antigravity, pesquisa na web e revisão crítica com o Grok, front-end com o Cursor, tarefas pequenas com o Muse. O plano termina com uma linha "Cobertura" mostrando o que cada IA pegou.
+1. Lê a cota real de cada IA com `node <pasta da skill>/cotas.mjs` (usa `orca account list --json` e não gasta tokens) e repete a leitura antes de cada onda. A parte de cada IA é proporcional à folga dela, ajustada pelo ritmo de consumo (quem está adiantado na janela recebe menos) e pelo tamanho do plano. Acima de 80% a IA só revisa; acima de 95% fica de fora até o reset. Claude e Codex guardam 15% da semana para revisão crítica.
+2. Quebra a tarefa sozinho, sem perguntar, e monta um plano com IDs (T1, T2, T4.1...) em que **todas as IAs com cota recebem pelo menos uma tarefa**: implementação pesada com quem tem mais folga (em geral Codex ou Claude, mas Cursor, Grok e Muse também pegam implementação de verdade), pesquisa e leitura do código com o Antigravity, pesquisa na web e revisão crítica com o Grok, front-end com o Cursor, tarefas pequenas com o Muse. O plano traz a linha "Cotas" e termina com a linha "Cobertura" mostrando o que cada IA pegou.
 3. Dispara em ondas: as tarefas de cada onda saem juntas (até 6 ao mesmo tempo, uma por IA, cada uma na própria worktree) e `--deps` segura as que precisam esperar outra. Tarefas grandes marcadas `[expansivel]` podem abrir até 2 subagentes de apoio.
 4. Manda cada entrega para revisão por uma IA de outro fornecedor, sem dizer quem fez.
-5. Para e pergunta a você antes de: mudança de arquitetura, apagar código ou dados, migração de banco, merge na main, deploy ou produção.
-6. Termina com um relatório curto, incluindo o uso semanal do Claude e do Codex.
+5. Se uma IA bater o limite no meio do trabalho, passa a tarefa na hora para a próxima com folga. Executa tudo sem pedir aprovação, exceto os limites fixos (merge na main, deploy, produção, dados reais, migração em banco real, segredos), que ficam prontos em "Pendente de aprovação".
+6. Termina com um relatório curto, incluindo o bloco Créditos: consumo de cada IA, quem ficou sem cota e os próximos resets.
 
 Configuração concluída.
 

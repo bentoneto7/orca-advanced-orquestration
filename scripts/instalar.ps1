@@ -38,12 +38,12 @@ function Set-Block($path, $body) {
   Write-NoBom $path $t
 }
 function Add-Hook($skillFile) {
+  # Grava (ou troca) a secao "Equipe Zuuuw" no fim da skill do Orca.
   if (-not (Test-Path $skillFile)) { return $false }
-  $t = [IO.File]::ReadAllText($skillFile)
-  if ($t -notmatch 'Equipe Zuuuw') {
-    $hook = [IO.File]::ReadAllText("$Repo\config\orchestration-hook.md")
-    Write-NoBom $skillFile ($t.TrimEnd() + "`n" + $hook)
-  }
+  $t = [IO.File]::ReadAllText($skillFile) -replace "`r", ''
+  $i = $t.IndexOf('## Equipe Zuuuw'); if ($i -ge 0) { $t = $t.Substring(0, $i) }
+  $hook = [IO.File]::ReadAllText("$Repo\config\orchestration-hook.md") -replace "`r", ''
+  Write-NoBom $skillFile ($t.TrimEnd() + "`n" + $hook)
   return $true
 }
 
@@ -84,8 +84,9 @@ if ($Verificar) {
   foreach ($k in $RuleFiles.Keys) { $f = $RuleFiles[$k]; $ok = (Test-Path $f) -and ([IO.File]::ReadAllText($f) -match [regex]::Escape($Ini)); Write-Host ("  {0,-12} {1}" -f $k, $(if ($ok) { 'OK' } else { 'falta' })) }
   Write-Host ("  {0,-12} {1}" -f 'grok',   $(if (Test-Path $GrokRule)   { 'OK' } else { 'falta' }))
   Write-Host ("  {0,-12} {1}" -f 'cursor', $(if (Test-Path $CursorRule) { 'OK' } else { 'falta' }))
-  Write-Host "== Contas com cota (orca account list)"
-  if (Get-Command orca -ErrorAction SilentlyContinue) { orca account list 2>&1 | Select-Object -First 15 }
+  Write-Host "== Cota de cada IA (cotas.mjs, sem gastar tokens)"
+  if (Get-Command node -ErrorAction SilentlyContinue) { node "$Repo\skills\orquestration\cotas.mjs" }
+  elseif (Get-Command orca -ErrorAction SilentlyContinue) { orca account list 2>&1 | Select-Object -First 15 }
   return
 }
 
