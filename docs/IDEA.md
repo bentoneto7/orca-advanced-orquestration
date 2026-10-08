@@ -1,6 +1,6 @@
 # The idea: one request, six AIs working together
 
-This document explains the idea behind `orca-skills`: why use six AIs at the same time, how they organize themselves and why that gets more done than a single AI. To install, go straight to the [tutorial](TUTORIAL.md).
+This document explains the idea behind `orca-skills`: why use six AIs at the same time, how they organize themselves and why that gets more done than a single AI. To install, go straight to the [tutorial](TUTORIAL.md); for the overview, see the [README](../README.md) and the [skill itself](../skills/orquestration-avanced/SKILL.md).
 
 ## The problem
 
@@ -37,7 +37,7 @@ The pillars of the idea:
 
 ## How the dynamics work
 
-![Team dynamics](img/dynamics.png)
+![Diagram of the team dynamics: one request, a coordinator that reads quotas, up to six parallel workers in git worktrees, cross-review and delivery](img/dynamics.png)
 
 ```mermaid
 flowchart LR
@@ -70,17 +70,17 @@ Step by step:
 
 This is the plan format defined in `SKILL.md`. Each line becomes a task on Orca's board, and the Quotas line uses the real numbers from Oct 8, 2026, 7:28 PM (Brasília time):
 
-![Plan format of /orquestration-avanced](img/print-plan.png)
+![Plan format of /orquestration-avanced: Quotas line, three waves of tasks T1 to T9 with dependencies and the Coverage line](img/print-plan.png)
 
 ### In practice, inside Orca
 
 A real screenshot of the Orca window, cropped to show only the structure. Each task becomes a worktree named `<agent> - <ID> <title>`, a child of the coordinator's session, and the status bar shows the quota the skill reads:
 
-![Real screenshot of Orca running the skill](img/print-orca-real.png)
+![Real cropped screenshot of the Orca sidebar with cursor, muse and codex workers in their own worktrees, and the Orca status bar with each AI's quota](img/print-orca-real.png)
 
 ## Why it is more efficient
 
-![Benefits of using all AIs together](img/benefits.png)
+![Comparison of one AI working in a queue versus six AIs in Orca working in parallel, with six benefit cards](img/benefits.png)
 
 - **Real parallelism.** Research, implementation, tests and documentation move at the same time instead of waiting in a queue. Separate worktrees keep one AI from getting in another's way.
 - **Combined quota.** The limit is no longer one subscription's, it is the sum of all of them. When one gets tight, the others absorb the work, and the subscriptions you already pay for stop sitting idle.
@@ -93,7 +93,7 @@ A real screenshot of the Orca window, cropped to show only the structure. Each t
 
 ## Credit management
 
-![Credit management](img/credit-management.png)
+![Credit management: quota used per AI with 60, 80 and 95 percent thresholds, the steps before each round and the healthy pacing chart](img/credit-management.png)
 
 Credit management was born when Gemini ran out and Claude went past 80%. The rule is simple: **each AI spends at the pace of its own quota**.
 
@@ -111,14 +111,14 @@ Credit management was born when Gemini ran out and Claude went past 80%. The rul
 
 A real reading taken on the PC on Oct 8, 2026, at 7:28 PM (Brasília time). It confirms the idea: Claude, with 77% of its week used and ahead of its pace, is in light/medium and gets only a small share; Gemini ran out, so Antigravity runs with Claude Sonnet; and Codex, with headroom, gets the heavy work while Cursor and Grok take real chunks.
 
-![Real output of cotas.mjs and Orca](img/print-quotas.png)
+![Real terminal output of cotas.mjs: the Quotas line with usage, pace, reset, status and share for each AI, plus orca status](img/print-quotas.png)
 
 ## 100% autonomy
 
 > [!IMPORTANT]
 > **Sub-agents execute everything on their own, with no confirmations.** They obey the coordinator 100%, never ask the user and nothing stops the run. You make the request and get the delivery.
 
-![100% autonomy](img/autonomy.png)
+![100% autonomy: request, coordinator, sub-agents executing in parallel, cross-review and delivery with zero confirmations; the no-approval flags of each AI and Chrome on autopilot](img/autonomy.png)
 
 ```mermaid
 flowchart LR
@@ -167,7 +167,7 @@ With that, Claude and Codex open, read and act in your Chrome on their own: they
 
 The final report, in the skill's format, shows what each AI did and the Credits block:
 
-![Final report format of /orquestration-avanced](img/print-report.png)
+![Final report format of /orquestration-avanced: what each AI did, decisions taken alone, the Credits block and the pending-approval exception](img/print-report.png)
 
 **Only exception, for safety.** The skill keeps a few fixed limits (section 9 of `SKILL.md`): merge or push to `main`, deploy, production actions, deleting or changing real data, running a migration on a real database, touching secrets and deleting files outside the worktree. In these cases the sub-agent does not stop: it leaves the PR, branch or command ready and lists it in the final report under "Pending approval". The rest of the work goes on as usual.
 

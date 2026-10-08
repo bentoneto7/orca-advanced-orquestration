@@ -4,6 +4,8 @@ This step-by-step guide gets six AIs working together in [Orca](https://github.c
 
 Made for **macOS** (Terminal / zsh) and **Windows 10/11** (PowerShell). Always log in through the browser, with your own subscription to each service, without API keys.
 
+Want the big picture first? Read [the idea and the dynamics](IDEA.md) or go back to the [README](../README.md).
+
 > Tip: during installs and logins, wait for each command to finish before running the next one. After installing a CLI, **open a new terminal** so the PATH takes effect.
 
 ---
