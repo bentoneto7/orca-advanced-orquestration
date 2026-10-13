@@ -2,7 +2,8 @@
 # Merge it with what is already there; do not replace the whole file.
 
 [ui]
-# "auto" asks for confirmation only for risky actions. Use "default" to confirm everything.
+# Scoped mode, same as the launch docs. "auto" asks for confirmation only for risky actions.
+# Do not set yolo = true or permission_mode = "bypassPermissions".
 permission_mode = "auto"
 yolo = false
 compact_mode = false

@@ -9,8 +9,11 @@
   The script is idempotent: run it as many times as you like. Before touching an instructions
   file that already exists, it keeps a copy <file>.bak-orca (only the first time).
   It also removes the old `orquestration` and `orquestration-avanced` skill folders (renamed to orca-advanced-orquestration).
+  Node.js is required to generate the Grok and Cursor rules from config/equipe-orca.md.
+  -Check is the same as -Verificar.
 #>
-param([switch]$Verificar)
+param([switch]$Verificar, [switch]$Check)
+if ($Check) { $Verificar = $true }
 
 $ErrorActionPreference = 'Continue'
 $Repo  = Split-Path -Parent $PSScriptRoot
@@ -28,14 +31,16 @@ function Write-NoBom($path, $text) {
 function Backup-Once($path) {
   if ((Test-Path $path) -and -not (Test-Path "$path.bak-orca")) { Copy-Item $path "$path.bak-orca" }
 }
-function Set-Block($path, $body) {
+function Set-Block {
   # Writes (or replaces) the team block between the markers, without touching the rest of the file.
+  [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification='Installer writes instruction files directly.')]
+  param($path, $body)
   $block = "$Ini`n$body`n$Fim"
   if (Test-Path $path) {
     Backup-Once $path
     $t = [IO.File]::ReadAllText($path)
     $rx = [regex]::Escape($Ini) + '[\s\S]*?' + [regex]::Escape($Fim)
-    if ($t -match $rx) { $t = [regex]::Replace($t, $rx, [Text.RegularExpressions.MatchEvaluator]{ param($m) $block }) }
+    if ($t -match $rx) { $t = [regex]::Replace($t, $rx, [Text.RegularExpressions.MatchEvaluator]{ $block }) }
     else { $t = $t.TrimEnd() + "`n`n" + $block + "`n" }
   } else { $t = $block + "`n" }
   Write-NoBom $path $t
@@ -43,6 +48,7 @@ function Set-Block($path, $body) {
 function Add-Hook($skillFile) {
   # Writes (or replaces) the "Zuuuw team" section at the end of Orca's skill.
   if (-not (Test-Path $skillFile)) { return $false }
+  Backup-Once $skillFile
   $t = [IO.File]::ReadAllText($skillFile) -replace "`r", ''
   foreach ($h in '## Zuuuw team', '## Equipe Zuuuw') { $i = $t.IndexOf($h); if ($i -ge 0) { $t = $t.Substring(0, $i) } }
   $hook = [IO.File]::ReadAllText("$Repo\config\orchestration-hook.md") -replace "`r", ''
@@ -93,7 +99,14 @@ if ($Verificar) {
   Write-Host "== Orca orchestration link"
   foreach ($d in @($SkillDirs.Values) + @($MuseSkills)) {
     $f = "$d\orchestration\SKILL.md"
-    if (Test-Path $f) { $ok = ([IO.File]::ReadAllText($f)).Contains("``$Skill``"); if (-not $ok) { $fail++ }; Write-Host ("  {0,-48} {1}" -f $f.Replace($H,'~'), $(if ($ok) { 'OK' } else { 'missing' })) }
+    if (Test-Path $f) {
+      $ok = [IO.File]::ReadAllText($f) -match '(?m)^## (Zuuuw team|Equipe Zuuuw)'
+      if (-not $ok) {
+        $fail++
+        Write-Warning "'Zuuuw team' section missing in $($f.Replace($H, '~')) (an Orca update may have replaced the skill). Run the installer again."
+      }
+      Write-Host ("  {0,-48} {1}" -f $f.Replace($H, '~'), $(if ($ok) { 'OK' } else { 'missing' }))
+    }
   }
   Write-Host "== Team rules"
   foreach ($k in $RuleFiles.Keys) { $f = $RuleFiles[$k]; $ok = (Test-Path $f) -and ([IO.File]::ReadAllText($f) -match [regex]::Escape($Ini)) -and ([IO.File]::ReadAllText($f)).Contains($Skill); if (-not $ok) { $fail++ }; Write-Host ("  {0,-12} {1}" -f $k, $(if ($ok) { 'OK' } else { 'missing' })) }
@@ -107,9 +120,15 @@ if ($Verificar) {
 }
 
 Write-Host "1) Official Orca skills (orca-cli and orchestration)"
+$skillsInstallFailed = $false
 if (Get-Command orca -ErrorAction SilentlyContinue) {
-  orca skills install --skill orca-cli --skill orchestration --agent antigravity,claude-code,codex,cursor,grok,universal 2>&1 | Out-Null
-  Write-Host "   installed via orca skills install"
+  & orca skills install --skill orca-cli --skill orchestration --agent antigravity,claude-code,codex,cursor,grok,universal
+  if ($LASTEXITCODE -ne 0) {
+    Write-Error "orca skills install failed (exit $LASTEXITCODE)."
+    $skillsInstallFailed = $true
+  } else {
+    Write-Host "   installed via orca skills install"
+  }
 } else { Write-Host "   WARNING: 'orca' command not found. Open Orca > Settings > General > Orca CLI > Register and run again." }
 
 Write-Host "2) Team skill ($Skill) in every folder"
@@ -147,9 +166,19 @@ Write-Host "   linked in $($hooked.Count) folder(s)"
 Write-Host "4) Rules so each AI takes the coordinator's calls"
 $body = [IO.File]::ReadAllText("$Repo\config\equipe-orca.md").TrimEnd()
 foreach ($k in $RuleFiles.Keys) { Set-Block $RuleFiles[$k] $body; Write-Host "   $k -> $($RuleFiles[$k])" }
-Write-NoBom $GrokRule   ([IO.File]::ReadAllText("$Repo\config\grok-rules-orca-equipe.md"));  Write-Host "   grok -> $GrokRule"
-Write-NoBom $CursorRule ([IO.File]::ReadAllText("$Repo\config\cursor-rules-orca-equipe.mdc")); Write-Host "   cursor -> $CursorRule"
+if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+  Write-Error "node is required to generate Grok and Cursor rules from config/equipe-orca.md."
+  exit 1
+}
+& node "$Repo\scripts\generate-rules.mjs" --grok $GrokRule --cursor $CursorRule
+if ($LASTEXITCODE -ne 0) {
+  Write-Error "generate-rules.mjs failed (exit $LASTEXITCODE)."
+  exit $LASTEXITCODE
+}
+Write-Host "   grok -> $GrokRule"
+Write-Host "   cursor -> $CursorRule"
 
 Write-Host ""
 Write-Host "Done. Now in Orca: Settings > Agents > Refresh, and open a new session of each agent."
 Write-Host "To check: powershell -ExecutionPolicy Bypass -File .\scripts\instalar.ps1 -Verificar"
+if ($skillsInstallFailed) { exit 1 }
