@@ -16,7 +16,7 @@ When invoked, do NOT ask how to split the work. Run it directly:
 1. Setup (section 1) and quota reading (section 2).
 2. Break the task down and write the plan (section 4), with the Quotas and Coverage lines.
 3. Create the tasks on the board and dispatch Wave 1 in parallel (section 5).
-4. Before each wave, re-read the quotas and rebalance. Review, integrate and deliver (sections 6 to 10).
+4. Before each wave, re-read the quotas and rebalance the remaining plan. That plan is only the initial guess. Before every `worker-start`, run `cotas.mjs next`. After every `worker_done`, run `cotas.mjs record`. Review, integrate and deliver (sections 6 to 10).
 Never stop to ask the user: they do not watch the workers. When in doubt, pick the safest reversible option, log it on the board and keep going. Fixed limits in section 9.
 
 ## 1. Setup
@@ -28,6 +28,7 @@ Never stop to ask the user: they do not watch the workers. When in doubt, pick t
 ## 2. Credit management (real quota + healthy pacing)
 Quota reading (zero token cost), before the plan and before EVERY wave:
 - `node <this skill's folder>/cotas.mjs` -> prints the `Quotas` line (usage per window, pace, reset, status and each AI's share) and a `Suggested share` line. `--json` for details. The CLI is `$ORCA_CLI_COMMAND`, then `orca-ide`, then `orca`.
+- Per-task rebalance (the wave plan is the initial guess only). Before every `worker-start`: `node <this skill's folder>/cotas.mjs next --size <light|medium|heavy> --coordinator <claude|codex> [--taken ai=n,ai=n]`. It rereads live quota, subtracts that AI's decayed average cost for the size class (empty ledger defaults: light 1, medium 3, heavy 8 quota points), keeps the 15% claude/codex reserve and the 35% wave cap, and prints `Next` plus `Fallback`. Never pass the coordinator as the implementation agent. After every `worker_done`: `node <this skill's folder>/cotas.mjs record --ai <agent> --task <id> --size <class> [--tokens <n>] [--quota-before <pct from the next reading>]`. One JSON line is appended to `~/.orca-advanced/usage.jsonl` (`ORCA_USAGE_LEDGER` overrides the path). Quota after comes from `account list`. Tokens are optional.
 - Without node: `orca account list --json` -> `result.rateLimits` (claude/codex: 5h session + weekly; cursor: monthly, bucket "Cursor Models"; grok: weekly; antigravity: buckets "Gemini Models" and "Claude and GPT models"). Antigravity also: `agy -p /usage --output-format json --print-timeout 20s`.
 - Muse has no meter. Never spend tokens to measure quota (no free-form prompt just to check).
 
@@ -50,7 +51,7 @@ Split by remaining quota: each AI's suggested share is proportional to `headroom
 
 Cheapest model that does the job: `worker-start --model <id> --effort <low|medium|high>`. Light task (docs, checklist, small fix) = smaller model or low effort; medium = medium; heavy or critical = default/high. In cursor, prefer "Cursor Models" (own bucket) over "Other Models".
 
-Rate limit mid-run: if a worker reports a quota/rate-limit error, re-read the quotas, mark the AI as excluded until the reset and reassign the task right away (`worker-start --retry-of`) to the next AI with the most headroom, without asking the user.
+Rate limit mid-run: if a worker reports a quota/rate-limit error, record what you can, re-read the quotas, mark the AI as excluded until the reset and reassign the task right away (`worker-start --retry-of`) to the agent `cotas.mjs next` prints, without asking the user.
 
 ## 3. Roles and distribution
 Spread implementation across the AIs with quota, in the suggested share from section 2. The coordinator only plans, reviews and delegates. Heavy tasks go to the `Heavy` line, unless that AI is the coordinator. Give every AI with quota at least one task only when the job has 4 or more subtasks. A smaller job follows the share or the fixed roles.
@@ -95,12 +96,14 @@ Coverage: claude T9 | codex T4,T8 | antigravity T1 | grok T2,T6 | cursor T5,T7 |
 ```
 - Coverage: name every AI that received a task. Give every AI with quota at least one task only when the plan has 4 or more subtasks; with fewer, follow the suggested share. An excluded AI still shows up as `no quota until <reset>`.
 - Per wave, do not give one AI more than about 35% of the tasks when at least 3 AIs have quota. With fewer, the cap is lifted.
-- The coordinator does not take implementation tasks. Heavy tasks go to the `Heavy` AI, or the next-highest headroom if that AI is the coordinator.
+- The coordinator does not take implementation tasks. The agent on each plan line is the initial guess. At dispatch, `next` picks the worker.
+- Heavy tasks go to the `Heavy` AI only when `next` agrees, or to the next name on the `Fallback` line.
 - Each task: ID, agent, title, deliverable, `deps` when needed, `[expandable]` if it may open sub-agents, and `--model/--effort` when it is light.
 - Board: `orca orchestration task-create --spec "<spec>" --task-title "<ID> <title>" --display-name "<agent> - <ID> <title>" [--deps '["<id>"]'] [--parent <id>] --json`.
 
 ## 5. Parallel dispatch
-- Dispatch the whole wave together: `orca orchestration worker-start --task <id> --agent <agent> [--model <id> --effort <level>] --worktree new-child --name <slug> --json`.
+- Dispatch the ready tasks of the wave together. Before each `worker-start`, run `cotas.mjs next --size <class> --coordinator <you> --taken <ai=n,... already started this wave>`. Use that `Next` agent, not the name in the initial plan when they differ: `orca orchestration worker-start --task <id> --agent <Next> [--model <id> --effort <level>] --worktree new-child --name <slug> --json`.
+- After each `worker_done`, run `cotas.mjs record --ai <agent> --task <id> --size <class> [--tokens <n if the worker reported them>] [--quota-before <pct>]`.
 - Read-only tasks may use `--worktree current`.
 - Up to 6 workers at the same time; 4 if claude and codex are both >= 80%.
 - `--deps` only when the task needs another task's result.
@@ -133,7 +136,7 @@ Depth in Settings > Orchestration > Nested worker depth.
 Summary: executed plan (Quotas and Coverage), what each AI did, which version won and why, tests, decisions taken alone, "Pending approval" (with a ready command or PR) and the Credits block: usage per agent at the start and at the end (run `cotas.mjs` again), who was excluded and until when, reassignments due to rate limits and next resets.
 
 ## 11. When you are a worker
-- Reply through the same channel (reply / worker_done) in up to 15 lines.
+- Reply through the same channel (reply / worker_done) in up to 15 lines. If the tool reports a token count, add `tokens <n>` on its own so the coordinator can pass `--tokens` to `record`.
 - Work only in your worktree. Sub-agents only with `[expandable]` (section 6).
 - Obey the coordinator 100%; never ask the user. Scope doubt: `orca orchestration ask`; with no answer, take the safest option and move on.
 - Quota or rate-limit error: stop and immediately report `NO QUOTA until <reset>` to the coordinator, so it can reassign.

@@ -1,11 +1,29 @@
 #!/usr/bin/env node
 // Reads each AI's quota for /orca-advanced-orquestration (zero token cost).
-// Usage: node cotas.mjs [--json] [file.json]   (without a file, runs `<cli> account list --json`)
+// Usage:
+//   node cotas.mjs [--json] [file.json]          quota snapshot (no file: `<cli> account list --json`)
+//   node cotas.mjs record --ai <ai> --task <id> --size <light|medium|heavy> [--tokens N] [--quota-before N] [--account file] [--ledger path]
+//   node cotas.mjs next --size <class> --coordinator <claude|codex> [--taken ai=n,...] [--account file] [--ledger path]
 // CLI: $ORCA_CLI_COMMAND, then `orca-ide`, then `orca` (first one that exists).
+// Ledger: $ORCA_USAGE_LEDGER or ~/.orca-advanced/usage.jsonl
 // Never prints emails, ids or credentials: only percentages, resets and weights.
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import {
+  LEDGER_DEFAULTS,
+  appendLedger,
+  buildRecord,
+  estimateCosts,
+  formatPick,
+  formatRecord,
+  parseTaken,
+  pickNext,
+  previousQuotaAfter,
+  readLedger,
+  resolveLedgerPath,
+  resolveQuotaBefore,
+} from './ledger.mjs';
 
 // Model names and relative capacities. Shares follow remaining quota (headroom x pace x capacity).
 // Capacities are 1 so plan size does not park the wave on claude and codex.
@@ -20,6 +38,9 @@ export const CONFIG = {
   },
   shareCapPercent: 35,
   shareCapMinAgents: 3,
+  ledgerDecay: LEDGER_DEFAULTS.decay,
+  defaultQuotaCost: LEDGER_DEFAULTS.quotaCost,
+  defaultTokenCost: LEDGER_DEFAULTS.tokenCost,
 };
 
 const AGENTS = ['claude', 'codex', 'cursor', 'grok', 'antigravity', 'muse'];
@@ -255,8 +276,114 @@ function invokedDirectly() {
   }
 }
 
+function parseFlags(argv) {
+  const flags = {};
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (!arg.startsWith('--')) continue;
+    const key = arg.slice(2);
+    const next = argv[i + 1];
+    if (next == null || next.startsWith('--')) flags[key] = true;
+    else {
+      flags[key] = next;
+      i += 1;
+    }
+  }
+  return flags;
+}
+
+function worstQuota(agent) {
+  if (!agent?.windows?.length) return null;
+  return Math.max(...agent.windows.map((window) => window.usage));
+}
+
+function recordCommand(argv) {
+  const flags = parseFlags(argv);
+  const ledgerPath = flags.ledger || resolveLedgerPath();
+  let report;
+  try {
+    report = buildReport(loadRateLimits(flags.account));
+  } catch (e) {
+    console.error(`cotas: warning: ${e && e.message ? e.message : e}. record was not appended.`);
+    process.exit(1);
+  }
+  const agent = report.agents.find((item) => item.name === flags.ai);
+  const quotaAfter = agent ? worstQuota(agent) : null;
+  const { rows } = readLedger(ledgerPath);
+  let row;
+  try {
+    row = buildRecord({
+      ai: flags.ai,
+      task: flags.task,
+      size: flags.size,
+      tokens: flags.tokens,
+      quotaAfter,
+      quotaBefore: resolveQuotaBefore({
+        explicit: flags['quota-before'],
+        previousAfter: previousQuotaAfter(rows, flags.ai),
+        quotaAfter,
+      }),
+    });
+  } catch (e) {
+    console.error(e && e.message ? e.message : e);
+    process.exit(1);
+  }
+  appendLedger(ledgerPath, row);
+  console.log(formatRecord(row));
+}
+
+function nextCommand(argv) {
+  const flags = parseFlags(argv);
+  if (!flags.coordinator || flags.coordinator === true) {
+    console.error('next: pass --coordinator claude|codex (the coordinator does not take implementation)');
+    process.exit(1);
+  }
+  let report;
+  try {
+    report = buildReport(loadRateLimits(flags.account));
+  } catch (e) {
+    console.error(`cotas: warning: ${e && e.message ? e.message : e}.`);
+    process.exit(1);
+  }
+  const ledgerPath = flags.ledger || resolveLedgerPath();
+  const { rows } = readLedger(ledgerPath);
+  const estimates = estimateCosts(rows, {
+    decay: CONFIG.ledgerDecay,
+    quotaCost: CONFIG.defaultQuotaCost,
+    tokenCost: CONFIG.defaultTokenCost,
+  });
+  let pick;
+  try {
+    pick = pickNext({
+      agents: report.agents,
+      estimates,
+      size: flags.size,
+      coordinator: flags.coordinator,
+      taken: parseTaken(flags.taken),
+      capPercent: CONFIG.shareCapPercent,
+      capMinAgents: CONFIG.shareCapMinAgents,
+    });
+  } catch (e) {
+    console.error(e && e.message ? e.message : e);
+    process.exit(1);
+  }
+  if (flags.json) {
+    console.log(JSON.stringify({ ...pick, ledger: ledgerPath }, null, 2));
+    return;
+  }
+  console.log(formatPick(pick));
+}
+
 function main() {
   const args = process.argv.slice(2);
+  if (args[0] === 'record') {
+    recordCommand(args.slice(1));
+    return;
+  }
+  if (args[0] === 'next') {
+    nextCommand(args.slice(1));
+    return;
+  }
   const asJson = args.includes('--json');
   const file = args.find((a) => !a.startsWith('--'));
   let rl;
