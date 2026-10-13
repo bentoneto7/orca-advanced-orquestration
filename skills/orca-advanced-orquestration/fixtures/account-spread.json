@@ -1,0 +1,34 @@
+{
+  "result": {
+    "rateLimits": {
+      "claude": {
+        "status": "ok",
+        "session": { "usedPercent": 10, "windowMinutes": 300, "resetsAt": 4102444800000 },
+        "weekly": { "usedPercent": 70, "windowMinutes": 10080, "resetsAt": 4102444800000 }
+      },
+      "codex": {
+        "status": "ok",
+        "session": { "usedPercent": 10, "windowMinutes": 300, "resetsAt": 4102444800000 },
+        "weekly": { "usedPercent": 70, "windowMinutes": 10080, "resetsAt": 4102444800000 }
+      },
+      "cursor": {
+        "status": "ok",
+        "monthly": { "usedPercent": 0, "windowMinutes": 43200, "resetsAt": 4102444800000 },
+        "buckets": [
+          { "name": "Cursor Models", "usedPercent": 0, "windowMinutes": 43200, "resetsAt": 4102444800000 }
+        ]
+      },
+      "grok": {
+        "status": "ok",
+        "weekly": { "usedPercent": 80, "windowMinutes": 10080, "resetsAt": 4102444800000 }
+      },
+      "antigravity": {
+        "status": "ok",
+        "buckets": [
+          { "name": "Gemini Models", "usedPercent": 96, "windowMinutes": 10080, "resetsAt": 4102444800000 },
+          { "name": "Claude and GPT models", "usedPercent": 80, "windowMinutes": 10080, "resetsAt": 4102444800000 }
+        ]
+      }
+    }
+  }
+}

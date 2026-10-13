@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 # orca-advanced-orquestration - installs the team skills and rules in every AI (macOS / Linux)
 #
+# Requires python3 (instruction-file edits) and Node.js (Grok and Cursor rules are
+# generated from config/equipe-orca.md).
+#
 # Usage (from the repository folder):
 #   bash scripts/instalar.sh              # install / update
-#   bash scripts/instalar.sh --verificar  # check only, changes nothing
+#   bash scripts/instalar.sh --verificar  # check only, changes nothing (--check is the same)
 #
 # Idempotent: run it as many times as you like. Before touching an instructions file
 # that already exists, it keeps a copy <file>.bak-orca (only the first time).
@@ -25,14 +28,14 @@ OLD_SKILLS=(orquestration orquestration-avanced)
 VERIFICAR=0
 for arg in "$@"; do
   case "$arg" in
-    --verificar|-Verificar|-v) VERIFICAR=1 ;;
+    --verificar|--check|-Verificar|-v) VERIFICAR=1 ;;
     -h|--help)
-      sed -n '2,13p' "$0"
+      sed -n '2,16p' "$0"
       exit 0
       ;;
     *)
       echo "unknown flag: $arg" >&2
-      echo "usage: bash scripts/instalar.sh [--verificar]" >&2
+      echo "usage: bash scripts/instalar.sh [--verificar|--check]" >&2
       exit 1
       ;;
   esac
@@ -182,11 +185,21 @@ if [[ "$VERIFICAR" -eq 1 ]]; then
     "$MUSE" skills list --source user 2>/dev/null | grep -oE 'orca-cli|orca-advanced-orquestration|orquestration-avanced|orquestration|orchestration' | sort -u | sed 's/^/    /' || true
   fi
   echo "== Orca orchestration link"
+  check_orca_hook() {
+    local name="$1" f="$2"
+    [[ -f "$f" ]] || return 0
+    if grep -qE '^## (Equipe Zuuuw|Zuuuw team)' "$f"; then
+      printf "  %-24s %s\n" "$name" "OK"
+    else
+      printf "  %-24s %s\n" "$name" "missing"
+      echo "  WARNING: 'Zuuuw team' section missing in $f (an Orca update may have replaced the skill). Run the installer again." >&2
+      fail=$((fail + 1))
+    fi
+  }
   for k in "${SKILL_KEYS[@]}"; do
-    f="$(skill_dir "$k")/orchestration/SKILL.md"
-    [[ -f "$f" ]] || continue
-    if grep -qF "\`$SKILL\`" "$f"; then printf "  %-24s %s\n" "$k" "OK"; else printf "  %-24s %s\n" "$k" "missing"; fail=$((fail + 1)); fi
+    check_orca_hook "$k" "$(skill_dir "$k")/orchestration/SKILL.md"
   done
+  check_orca_hook "muse" "$MUSE_SKILLS/orchestration/SKILL.md"
   echo "== Team rules"
   for k in "${RULE_KEYS[@]}"; do
     f="$(rule_file "$k")"
@@ -213,10 +226,21 @@ if [[ "$VERIFICAR" -eq 1 ]]; then
   exit 0
 fi
 
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "python3 is required to update instruction files. Install python3 and run again." >&2
+  exit 1
+fi
+
 echo "1) Official Orca skills (orca-cli and orchestration)"
+skills_install_failed=0
 if [[ -n "$ORCA" ]]; then
-  "$ORCA" skills install --skill orca-cli --skill orchestration --agent antigravity,claude-code,codex,cursor,grok,universal
-  echo "   installed via orca skills install"
+  if "$ORCA" skills install --skill orca-cli --skill orchestration --agent antigravity,claude-code,codex,cursor,grok,universal; then
+    echo "   installed via orca skills install"
+  else
+    status=$?
+    echo "   ERROR: orca skills install failed (exit ${status})." >&2
+    skills_install_failed=1
+  fi
 else
   echo "   WARNING: 'orca' command not found. Open Orca > Settings > General > Orca CLI > Register and run again."
   echo "   On a Mac, the binary also lives in /Applications/Orca.app/Contents/Resources/bin/orca"
@@ -279,13 +303,20 @@ for k in "${RULE_KEYS[@]}"; do
   set_block "$f" "$body"
   echo "   $k -> $f"
 done
-mkdir -p "$(dirname "$GROK_RULE")"
-cp "$REPO/config/grok-rules-orca-equipe.md" "$GROK_RULE"
+if ! command -v node >/dev/null 2>&1; then
+  echo "node is required to generate Grok and Cursor rules from config/equipe-orca.md." >&2
+  exit 1
+fi
+if ! node "$REPO/scripts/generate-rules.mjs" --grok "$GROK_RULE" --cursor "$CURSOR_RULE"; then
+  echo "   ERROR: generate-rules.mjs failed." >&2
+  exit 1
+fi
 echo "   grok -> $GROK_RULE"
-mkdir -p "$(dirname "$CURSOR_RULE")"
-cp "$REPO/config/cursor-rules-orca-equipe.mdc" "$CURSOR_RULE"
 echo "   cursor -> $CURSOR_RULE"
 
 echo
 echo "Done. Now in Orca: Settings > Agents > Refresh, and open a new session of each agent."
 echo "To check: bash scripts/instalar.sh --verificar"
+if [[ "$skills_install_failed" -ne 0 ]]; then
+  exit 1
+fi

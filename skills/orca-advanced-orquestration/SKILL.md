@@ -27,7 +27,7 @@ Never stop to ask the user: they do not watch the workers. When in doubt, pick t
 
 ## 2. Credit management (real quota + healthy pacing)
 Quota reading (zero token cost), before the plan and before EVERY wave:
-- `node <this skill's folder>/cotas.mjs` -> prints the ready-made `Quotas` line (usage per window, pace, reset, status and each AI's share). `--json` for details.
+- `node <this skill's folder>/cotas.mjs` -> prints the `Quotas` line (usage per window, pace, reset, status and each AI's share) and a `Suggested share` line. `--json` for details. The CLI is `$ORCA_CLI_COMMAND`, then `orca-ide`, then `orca`.
 - Without node: `orca account list --json` -> `result.rateLimits` (claude/codex: 5h session + weekly; cursor: monthly, bucket "Cursor Models"; grok: weekly; antigravity: buckets "Gemini Models" and "Claude and GPT models"). Antigravity also: `agy -p /usage --output-format json --print-timeout 20s`.
 - Muse has no meter. Never spend tokens to measure quota (no free-form prompt just to check).
 
@@ -37,12 +37,14 @@ Status per AI (worst window among 5h, weekly or monthly):
 - >= 80% review only: no heavy tasks; only reviews and short tasks.
 - >= 95% or exhausted: excluded until the reset. In the plan: `no quota until <reset>`.
 
-Split by headroom (the default, not leftovers): each AI's share is proportional to `headroom x pace x plan capacity`.
+Split by remaining quota: each AI's suggested share is proportional to `headroom x pace x capacity`, then capped.
 - Headroom = 100 - usage, minus a 15% weekly reserve for claude and codex (kept for critical review and coordination).
 - Healthy pacing (pace = usage - % of the window already elapsed): ahead (pace > 0) gets less; behind with headroom gets more. Goal: no AI runs out before its reset.
-- Capacity: claude and codex 3, cursor and grok 1, antigravity 0.3 (Starter: at most 1 short task per wave), muse 70% of the median of cursor and grok (no meter: tightly scoped tasks).
-- Whoever has the most headroom works the most and takes the heavy work. Codex is the heavy implementer whenever it has more headroom than claude. Cursor, grok and muse with headroom take real implementation (medium/heavy parts in parallel, with cross-review), not just leftovers.
-- Claude >= 80%: codex takes the heavy work (and coordinates, if the session is its own); claude only delegates in short messages and reviews what is critical. Review of critical work stays with claude or codex (whichever has more headroom), using the reserve.
+- Capacity defaults to 1 for every metered AI (config block at the top of `cotas.mjs`). Muse is 70% of the median of cursor and grok (no meter: tightly scoped tasks).
+- Cap: no suggested share exceeds 35% when at least 3 AIs have quota. With fewer, the cap is lifted.
+- The coordinator (the claude or codex session running this skill) only plans, reviews and delegates. It does not take implementation tasks. Heavy tasks go to the AI on the `Heavy` line (normal status, most headroom). If that AI is the coordinator, give the heavy task to the next-highest headroom.
+- Every AI with quota gets at least one task only when the job has 4 or more subtasks. Smaller jobs follow the suggested share and may leave an AI idle.
+- Review of critical work stays with claude or codex (whichever has more headroom), using the reserve. At >= 80% that AI only reviews and sends short messages.
 - Antigravity without Gemini quota but with headroom in "Claude and GPT models": use `--model claude-sonnet-4-6` in `worker-start` (models: `agy models`). Do not use `gemini` (API only).
 - Extra or pay-per-use credits (e.g. codex `extraUsage`) do not count as headroom.
 
@@ -51,12 +53,12 @@ Cheapest model that does the job: `worker-start --model <id> --effort <low|mediu
 Rate limit mid-run: if a worker reports a quota/rate-limit error, re-read the quotas, mark the AI as excluded until the reset and reassign the task right away (`worker-start --retry-of`) to the next AI with the most headroom, without asking the user.
 
 ## 3. Roles and distribution
-Every run uses ALL AIs with quota: each one gets at least one task, in the proportion from section 2. If the task is small, split it finer or use the fixed roles.
+Spread implementation across the AIs with quota, in the suggested share from section 2. The coordinator only plans, reviews and delegates. Heavy tasks go to the `Heavy` line, unless that AI is the coordinator. Give every AI with quota at least one task only when the job has 4 or more subtasks. A smaller job follows the share or the fixed roles.
 
 | Agent | Main role | Fixed role (always fits) |
 |---|---|---|
-| `claude` | Heavy implementation or coordination + integration | Final integration and critical review |
-| `codex` | Heavy implementation | Automated tests for the delivery |
+| `claude` | Coordination, integration, critical review | Final integration and critical review |
+| `codex` | Implementation when it has headroom, or coordination | Automated tests for the delivery |
 | `antigravity` | Code research and broad reading | Map of the affected code (files, risks) |
 | `grok` | Web research, critical review, medium implementation | Blind cross-review of one delivery |
 | `cursor` | Front-end, UI, medium/heavy implementation | UI/DX or documentation review |
@@ -72,7 +74,8 @@ Save it on the board; each line becomes a task. Hierarchical IDs show the expans
 ```
 PLAN /orca-advanced-orquestration - <title>
 Coordinator: <claude|codex>   Sub-agent depth: <1|2>
-Quotas: <cotas.mjs line: agent usage 5h/weekly (pace, reset) status -> share%>
+Quotas: <cotas.mjs Quotas line: agent usage 5h/weekly (pace, reset) status -> share%>
+Suggested share: <cotas.mjs Suggested share line>
 
 Wave 1 (parallel)
   T1   antigravity  Map of the affected code             -> list of files + risks
@@ -90,7 +93,9 @@ Wave 3 (review and integration)
 
 Coverage: claude T9 | codex T4,T8 | antigravity T1 | grok T2,T6 | cursor T5,T7 | muse T3,T4.1
 ```
-- Mandatory coverage: name every AI; the excluded one shows up as `no quota until <reset>`.
+- Coverage: name every AI that received a task. Give every AI with quota at least one task only when the plan has 4 or more subtasks; with fewer, follow the suggested share. An excluded AI still shows up as `no quota until <reset>`.
+- Per wave, do not give one AI more than about 35% of the tasks when at least 3 AIs have quota. With fewer, the cap is lifted.
+- The coordinator does not take implementation tasks. Heavy tasks go to the `Heavy` AI, or the next-highest headroom if that AI is the coordinator.
 - Each task: ID, agent, title, deliverable, `deps` when needed, `[expandable]` if it may open sub-agents, and `--model/--effort` when it is light.
 - Board: `orca orchestration task-create --spec "<spec>" --task-title "<ID> <title>" --display-name "<agent> - <ID> <title>" [--deps '["<id>"]'] [--parent <id>] --json`.
 

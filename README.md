@@ -9,7 +9,7 @@
 
 ## What is this
 
-`orca-advanced-orquestration` is a **multi-agent orchestration** setup for **AI coding agents**. One request to the `/orca-advanced-orquestration` skill splits the work across **Claude Code**, **OpenAI Codex CLI**, **Cursor CLI**, **Grok CLI**, **Gemini via the Antigravity CLI** and **Muse**, running as **parallel agents** in separate **git worktrees** inside [Orca](https://github.com/stablyai/orca). Before every wave it reads each agent's real usage with zero-token commands, so the work follows each subscription's **quota and rate limits**: whoever has more headroom gets more work, and an agent that hits its limit is replaced on the spot. Sub-agents run with no confirmation prompts, obey the coordinator and review each other across vendors.
+`orca-advanced-orquestration` is a **multi-agent orchestration** setup for **AI coding agents**. One request to the `/orca-advanced-orquestration` skill splits the work across **Claude Code**, **OpenAI Codex CLI**, **Cursor CLI**, **Grok CLI**, **Gemini via the Antigravity CLI** and **Muse**, running as **parallel agents** in separate **git worktrees** inside [Orca](https://github.com/stablyai/orca). Before every wave it reads each agent's real usage with zero-token commands, so the work follows each subscription's **quota and rate limits**: whoever has more headroom gets more work, no single AI takes more than about 35% of a wave when the rest of the team has quota, and an agent that hits its limit is replaced on the spot. The coordinator only plans and reviews. Sub-agents run in a scoped permission mode (no bypass flags), obey the coordinator and review each other across vendors.
 
 ![Diagram of the team dynamics: one request, a coordinator that reads quotas, up to six parallel workers in git worktrees, cross-review and delivery](docs/img/dynamics.png)
 
@@ -28,9 +28,9 @@
 
 - **Six AIs in parallel.** Claude, Codex, Cursor, Grok, Antigravity and Muse work at the same time, each in its own worktree, in waves with dependencies.
 - **Unbiased cross-review.** Every delivery is reviewed by an AI from another vendor, which does not know who wrote it.
-- **Credit management with healthy pacing.** Each AI's real quota is read before every wave, without spending tokens. Whoever has more headroom gets more work, whoever is ahead of its window's pace gets less, and Claude and Codex keep 15% for critical review.
+- **Credit management with healthy pacing.** Each AI's real quota is read before every wave, without spending tokens. Whoever has more headroom gets more work, whoever is ahead of its window's pace gets less, no AI takes more than about 35% of a wave when at least three have quota, and Claude and Codex keep 15% for critical review.
 - **Automatic reassignment.** If an AI hits its limit mid-run, the task moves right away to the next one with headroom, and the AI without quota sits out until its reset.
-- **100% autonomy.** Sub-agents execute everything without asking for confirmation, and Claude and Codex act in Chrome on their own. Only main, deploy and production end up as a ready PR in the report.
+- **Scoped autonomy.** Sub-agents do routine work without asking the user, inside each CLI's permission mode and deny rules. Chrome autopilot is opt-in, on a separate browser profile that is not logged in. Only main, deploy and production end up as a ready PR in the report.
 - **Token economy.** Replies of up to 15 lines, short handoffs and the cheapest model that does each task.
 - **Installers for macOS, Linux and Windows.** One command installs and checks everything in every AI.
 
@@ -70,7 +70,7 @@ The installer also removes the old `orquestration` and `orquestration-avanced` s
 
 ## 100% autonomy
 
-**Sub-agents execute everything on their own, with no confirmations.** Each AI runs in Orca with the arguments that skip approvals, obeys the coordinator 100% and never asks the user. Routine gates are resolved by the coordinator itself. Chrome runs on autopilot too: Claude uses the Claude in Chrome extension in auto mode and Codex has the `chrome`, `browser` and `computer-use` plugins, so both browse, click and test pages without asking for each click. Nothing stops the run, from request to delivery. Details in [docs/IDEA.md](docs/IDEA.md#100-autonomy).
+**Sub-agents do routine work without asking the user.** Each AI runs in a scoped permission mode (Claude `--permission-mode acceptEdits` plus `permissions.deny`, Codex `--full-auto` / workspace-write sandbox, Cursor `--sandbox enabled` with deny rules, Grok `permission_mode = "auto"`, Antigravity and Muse on their default modes). Do not pass `--dangerously-skip-permissions`, `--dangerously-bypass-approvals-and-sandbox`, `--yolo` or `--force`. The coordinator only plans, reviews and delegates. Chrome autopilot is opt-in and must use a separate browser profile that is not logged into personal accounts. Details in [docs/IDEA.md](docs/IDEA.md#100-autonomy).
 
 ![100% autonomy: request, coordinator, sub-agents executing in parallel, cross-review and delivery with zero confirmations; the no-approval flags of each AI and Chrome on autopilot](docs/img/autonomy.png)
 
@@ -90,7 +90,7 @@ A real (cropped) screenshot of Orca running the skill, and the quota reading don
 Install [Orca](https://github.com/stablyai/orca) and this repository's skills, then run `/orca-advanced-orquestration <task>` in a Claude or Codex session. The coordinator creates tasks on Orca's board and starts each worker with `orca orchestration worker-start --worktree new-child`, so every agent works at the same time in its own git worktree, without touching the others' files.
 
 **How do I avoid hitting Claude usage limits?**
-The skill reads Claude's 5-hour and weekly usage before every wave. From 60% Claude only gets light and medium tasks, from 80% it only reviews, and from 95% it sits out until the reset. Heavy work moves to Codex or to whichever agent has more headroom, and Claude and Codex keep a 15% weekly reserve for critical review.
+The skill reads Claude's 5-hour and weekly usage before every wave. From 60% Claude only gets light and medium tasks, from 80% it only reviews, and from 95% it sits out until the reset. The coordinator only plans and reviews. Heavy work goes to whichever agent has the most headroom, and no agent takes more than about 35% of a wave when at least three have quota. Claude and Codex keep a 15% weekly reserve for critical review.
 
 **Does checking quotas spend tokens?**
 No. `cotas.mjs` reads `orca account list --json`, which is a status command. The skill never sends a prompt just to check quota.
@@ -102,10 +102,10 @@ The worker reports `NO QUOTA until <reset>`, the coordinator marks it as exclude
 Through the Antigravity CLI, which uses your Google account login. The Gemini CLI is left out because it no longer accepts personal Google account logins, only API keys. When the Gemini quota runs out, Antigravity can keep working with Claude Sonnet from its own "Claude and GPT models" bucket.
 
 **Do the sub-agents ask for confirmation?**
-No. Each agent runs with its no-approval flag (for example `--dangerously-skip-permissions` for Claude and `--yolo` for Cursor), obeys the coordinator and never asks the user. The only exception is a short list of fixed safety limits (merge to main, deploy, production, real data, real-database migrations, secrets, deleting files outside the worktree), which are left ready in the final report instead.
+Routine work, yes. Each agent runs in a scoped permission mode with native deny rules (Claude `permissions.deny` for `git push origin main`, `rm -rf`, `~/.ssh/**` and `**/.env*`; Codex's workspace-write sandbox; Cursor `permissions.deny`). Do not pass `--dangerously-skip-permissions` or `--yolo`. Fixed safety limits (merge to main, deploy, production, real data, real-database migrations, secrets, deleting files outside the worktree) are left ready in the final report instead.
 
 **Do I need API keys?**
-No. Every CLI logs in through the browser with your own subscription.
+No. Every CLI logs in through the browser with your own subscription. Optional: a Docker MCP Toolkit profile named `orca` exposes context7 and sequentialthinking through `docker mcp gateway run --profile orca`. Store those server secrets with `docker mcp secret set`, not in a plaintext config file.
 
 **Which operating systems are supported?**
 macOS, Linux and Windows. There is a Bash installer (`scripts/instalar.sh`) and a PowerShell installer (`scripts/instalar.ps1`).
@@ -118,15 +118,17 @@ The default team is all six. An agent leaves a run when it has no quota or when 
 | Path | What it is |
 |---|---|
 | `skills/orca-advanced-orquestration/` | The team rules: credit management by real quota, each AI's role, board, cross-review between vendors, autonomy with fixed limits and parallel execution (up to 6 workers). |
-| `skills/orca-advanced-orquestration/cotas.mjs` | Reads each AI's quota (`orca account list --json`, no tokens spent) and prints the `Quotas` line with usage, pace, reset and each AI's share. |
+| `skills/orca-advanced-orquestration/cotas.mjs` | Reads each AI's quota (`ORCA_CLI_COMMAND`, then `orca-ide`, then `orca`; no tokens spent) and prints the `Quotas` and `Suggested share` lines. |
 | `skills/orchestration/` | Orca's official orchestration skill, with the "Zuuuw team" section at the end, which loads `orca-advanced-orquestration`. |
-| `config/equipe-orca.md` | Rules for how each AI takes and answers the coordinator's calls. The script writes this text into each AI's global instructions. |
-| `config/grok-rules-orca-equipe.md` | The same rules in Grok's format (`~/.grok/rules/`). |
-| `config/cursor-rules-orca-equipe.mdc` | The same rules in Cursor's format (`~/.cursor/rules/`). |
+| `config/equipe-orca.md` | Source of truth for how each AI takes the coordinator's calls. Applies only when an `ORCA_*` variable is set. |
+| `config/grok-rules-orca-equipe.md` | Generated from `equipe-orca.md` for `~/.grok/rules/`. |
+| `config/cursor-rules-orca-equipe.mdc` | Generated from `equipe-orca.md` for `~/.cursor/rules/` (not `alwaysApply`). |
+| `scripts/generate-rules.mjs` | Writes the Grok and Cursor rule files from `equipe-orca.md`. |
 | `config/grok-config.toml.example` | Suggested snippet for `~/.grok/config.toml`. |
 | `config/orchestration-hook.md` | The "Zuuuw team" section the script appends to Orca's skill. |
-| `scripts/instalar.sh` | Installs everything in every AI on macOS/Linux (`--verificar` only checks). |
-| `scripts/instalar.ps1` | The same on Windows (`-Verificar` only checks). |
+| `scripts/instalar.sh` | Installs everything in every AI on macOS/Linux (`--verificar` or `--check` only checks). Needs python3. |
+| `scripts/instalar.ps1` | The same on Windows (`-Verificar` or `-Check` only checks). |
+| `.github/workflows/ci.yml` | Runs `node --test`, shellcheck and PSScriptAnalyzer. |
 
 ## Documentation
 

@@ -1,11 +1,14 @@
 ---
-description: Zuuuw team in Orca - how to take calls from the coordinator
-alwaysApply: true
+description: Zuuuw team in Orca - how to take calls from the coordinator. Applies only when an ORCA_* environment variable is set.
 ---
+
+# Zuuuw team in Orca: how to take calls
+
+This block applies only when an `ORCA_*` environment variable is set. Orca sets `ORCA_CLI_COMMAND` for managed sessions (including WSL) and `ORCA_DEV_REPO_ROOT` for a dev checkout (see `skills/orchestration`). If no `ORCA_*` variable is set, ignore this block: behave normally and ask the user.
 
 You are part of a team of AIs coordinated by Orca (claude, codex, cursor, grok, antigravity and muse). Anyone can be the coordinator or a worker.
 
-When you receive a task from Orca (opened by `orca orchestration worker-start`, an `orchestration send`/`ask` message, or a prompt that cites a board task id):
+When you receive a task from Orca (opened by `orca orchestration worker-start`, an `orchestration send`/`ask` message, or a prompt that cites a board task id) and an `ORCA_*` variable is set:
 
 1. Load the `orchestration` and `orca-advanced-orquestration` skills and follow their rules.
 2. Work only in your own worktree. Do not touch files outside it.
@@ -15,3 +18,4 @@ When you receive a task from Orca (opened by `orca orchestration worker-start`, 
 6. When done, reply through the same Orca channel (reply / worker_done) in at most 15 lines: what changed, files, tests run and risks.
 7. Fixed limits, not even on the coordinator's order: merge or push to main, deploy, production actions, deleting or changing real data, running a migration on a real database, touching secrets, deleting files outside the worktree. In these cases, leave it ready (branch, PR, command) and report it as "Pending approval", without stopping the rest of the work.
 8. Quota or rate-limit error: stop and tell the coordinator right away with `NO QUOTA until <reset>`, so it can reassign the task to another AI with headroom.
+9. Docker MCP Toolkit (optional): profile `orca` exposes context7 and sequentialthinking through `docker mcp gateway run --profile orca`. Store API keys with `docker mcp secret set`, not in plaintext config.
