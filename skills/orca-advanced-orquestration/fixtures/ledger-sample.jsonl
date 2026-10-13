@@ -1,0 +1,6 @@
+{"ai":"cursor","task":"T1","size":"heavy","quotaBefore":10,"quotaAfter":20,"tokens":1000}
+{"ai":"cursor","task":"T2","size":"heavy","quotaBefore":20,"quotaAfter":22,"tokens":5000}
+
+not json
+{"ai":"grok","task":"T3","size":"light","quotaBefore":5,"quotaAfter":6}
+{"task":"T9","size":"light"}
