@@ -180,6 +180,26 @@ if [[ "$VERIFICAR" -eq 1 ]]; then
   else
     printf "  %-24s %s\n" "muse" "missing $SKILL"; fail=$((fail + 1))
   fi
+  echo "== Model routing table"
+  models="$REPO/skills/$SKILL/models.json"
+  if [[ -f "$models" ]]; then
+    printf "  %-24s %s\n" "repo" "OK"
+  else
+    printf "  %-24s %s\n" "repo" "missing models.json"; fail=$((fail + 1))
+  fi
+  for k in "${SKILL_KEYS[@]}"; do
+    f="$(skill_dir "$k")/$SKILL/models.json"
+    if [[ -f "$models" && -f "$f" ]] && cmp -s "$models" "$f"; then
+      printf "  %-24s %s\n" "$k" "OK"
+    else
+      printf "  %-24s %s\n" "$k" "missing models.json"; fail=$((fail + 1))
+    fi
+  done
+  if [[ -f "$models" && -f "$MUSE_SKILLS/$SKILL/models.json" ]] && cmp -s "$models" "$MUSE_SKILLS/$SKILL/models.json"; then
+    printf "  %-24s %s\n" "muse" "OK"
+  else
+    printf "  %-24s %s\n" "muse" "missing models.json"; fail=$((fail + 1))
+  fi
   if [[ -n "$MUSE" ]]; then
     echo "  muse:"
     "$MUSE" skills list --source user 2>/dev/null | grep -oE 'orca-cli|orca-advanced-orquestration|orquestration-avanced|orquestration|orchestration' | sort -u | sed 's/^/    /' || true

@@ -1,5 +1,5 @@
 {
-  "note": "Editable defaults, not a lock. Model ids should match what each CLI lists today. Adding a new LLM or provider is a new entry under agents: tiers light, medium, and heavy, plus an argv template. Placeholders are {model} and {effort}.",
+  "note": "Editable defaults, not a lock. This file ships inside the skill folder so install copies it. ORCA_MODELS_PATH overrides it; ~/.orca-advanced/models.json is used when that file exists. Model ids should match what each CLI lists today. Adding a new LLM or provider is a new entry under agents: tiers light, medium, and heavy, plus an argv template. Placeholders are {model} and {effort}.",
   "success": { "minRate": 0.8, "minSamples": 3 },
   "agents": {
     "claude": {

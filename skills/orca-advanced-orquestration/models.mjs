@@ -1,13 +1,23 @@
-// Model routing. config/models.json is the table; this file only reads it.
-import { readFileSync } from 'node:fs';
+// Model routing. models.json next to this file is the shipped table; this file only reads it.
+import { existsSync, readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { LEDGER_DEFAULTS, SIZE_CLASSES } from './ledger.mjs';
 
-export const MODELS_PATH = join(dirname(fileURLToPath(import.meta.url)), '../../config/models.json');
+export const BUNDLED_MODELS_PATH = join(dirname(fileURLToPath(import.meta.url)), 'models.json');
 const ORDER = ['light', 'medium', 'heavy'];
 
-export function loadModels(path = MODELS_PATH) {
+// ORCA_MODELS_PATH wins. A user copy at ~/.orca-advanced/models.json wins over the copy shipped with the skill.
+export function resolveModelsPath(env = process.env, home = homedir(), exists = existsSync) {
+  const fromEnv = env.ORCA_MODELS_PATH;
+  if (typeof fromEnv === 'string' && fromEnv.trim()) return fromEnv.trim();
+  const userCopy = join(home, '.orca-advanced', 'models.json');
+  if (exists(userCopy)) return userCopy;
+  return BUNDLED_MODELS_PATH;
+}
+
+export function loadModels(path = resolveModelsPath()) {
   const table = JSON.parse(readFileSync(path, 'utf8'));
   if (!table || typeof table !== 'object' || !table.agents) throw new Error('models table is missing agents');
   return table;

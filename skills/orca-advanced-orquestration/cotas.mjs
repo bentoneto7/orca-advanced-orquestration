@@ -24,7 +24,7 @@ import {
   resolveLedgerPath,
   resolveQuotaBefore,
 } from './ledger.mjs';
-import { chooseModel, classifyTier, escalateTier, estimateModelCosts, loadModels, renderArgs } from './models.mjs';
+import { chooseModel, classifyTier, escalateTier, estimateModelCosts, loadModels, renderArgs, resolveModelsPath } from './models.mjs';
 
 // Model names and relative capacities. Shares follow remaining quota (headroom x pace x capacity).
 // Capacities are 1 so plan size does not park the wave on claude and codex.
@@ -387,9 +387,10 @@ function nextCommand(argv) {
   let table = null;
   if (pick.next) {
     try {
-      table = loadModels(flags.models === true ? undefined : flags.models);
+      const modelsPath = flags.models && flags.models !== true ? flags.models : resolveModelsPath();
+      table = loadModels(modelsPath);
     } catch (e) {
-      console.error(`cotas: warning: ${e && e.message ? e.message : e}. Model falls back to the CLI default.`);
+      console.error(`cotas: warning: ${e && e.message ? e.message : e}. No model args; the CLI default is used.`);
     }
   }
   if (pick.next) {

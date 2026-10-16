@@ -7,6 +7,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { KNOWN_AIS, SIZE_CLASSES } from './ledger.mjs';
 import {
+  BUNDLED_MODELS_PATH,
   chooseModel,
   classifyTier,
   escalateTier,
@@ -14,6 +15,7 @@ import {
   loadModels,
   renderArgs,
   resolveModel,
+  resolveModelsPath,
 } from './models.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -72,8 +74,17 @@ test('escalation steps one tier and stops at heavy', () => {
   assert.equal(escalateTier('heavy'), 'heavy');
 });
 
+test('models path prefers ORCA_MODELS_PATH, then the user copy, else the bundled table', () => {
+  const home = '/home/someone';
+  const userCopy = join(home, '.orca-advanced', 'models.json');
+  assert.equal(resolveModelsPath({ ORCA_MODELS_PATH: '  /tmp/models.json  ' }, home, () => false), '/tmp/models.json');
+  assert.equal(resolveModelsPath({}, home, (path) => path === userCopy), userCopy);
+  assert.equal(resolveModelsPath({ ORCA_MODELS_PATH: '   ' }, home, () => false), BUNDLED_MODELS_PATH);
+  assert.equal(resolveModelsPath({}, home, () => false), BUNDLED_MODELS_PATH);
+});
+
 test('routing table lookup and CLI argv templates', () => {
-  const live = loadModels();
+  const live = loadModels(BUNDLED_MODELS_PATH);
   assert.match(live.note, /Adding a new LLM/);
   assert.equal(live.success.minRate, 0.8);
   assert.equal(live.success.minSamples, 3);
@@ -165,7 +176,7 @@ test('unknown AI and unknown model fall back', () => {
 });
 
 test('next prints the tier, model, and launch args, and a retry steps up', () => {
-  const live = loadModels();
+  const live = loadModels(BUNDLED_MODELS_PATH);
   const dir = mkdtempSync(join(tmpdir(), 'models-'));
   const ledger = join(dir, 'usage.jsonl');
   writeFileSync(ledger, `${JSON.stringify({ ai: 'cursor', task: 'T1', size: 'light', tier: 'light', quotaBefore: 0, quotaAfter: 1, ok: false })}\n`);
@@ -176,7 +187,7 @@ test('next prints the tier, model, and launch args, and a retry steps up', () =>
     '--coordinator', 'claude',
     '--account', spreadPath,
     '--ledger', join(dir, 'empty.jsonl'),
-  ], { encoding: 'utf8' });
+  ], { encoding: 'utf8', env: { ...process.env, ORCA_MODELS_PATH: BUNDLED_MODELS_PATH } });
   assert.equal(raised.status, 0, raised.stderr);
   assert.match(raised.stdout, /^Next: cursor/m);
   assert.match(raised.stdout, /^Tier: heavy/m);
@@ -190,8 +201,25 @@ test('next prints the tier, model, and launch args, and a retry steps up', () =>
     '--coordinator', 'claude',
     '--account', spreadPath,
     '--ledger', ledger,
-  ], { encoding: 'utf8' });
+  ], { encoding: 'utf8', env: { ...process.env, ORCA_MODELS_PATH: BUNDLED_MODELS_PATH } });
   assert.equal(retry.status, 0, retry.stderr);
   assert.match(retry.stdout, /^Tier: medium/m);
   assert.match(retry.stdout, new RegExp(`^Model: ${live.agents.cursor.tiers.medium.model}$`, 'm'));
+});
+
+test('next warns and omits model args when the table is missing', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'models-missing-'));
+  const missing = join(dir, 'models.json');
+  const result = spawnSync(process.execPath, [
+    cotasPath, 'next',
+    '--size', 'light',
+    '--coordinator', 'claude',
+    '--account', spreadPath,
+    '--ledger', join(dir, 'empty.jsonl'),
+  ], { encoding: 'utf8', env: { ...process.env, ORCA_MODELS_PATH: missing } });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stderr, /cotas: warning:/);
+  assert.match(result.stdout, /^Model: cli-default$/m);
+  assert.match(result.stdout, /^Args: none$/m);
+  assert.doesNotMatch(result.stdout, /--model/);
 });
