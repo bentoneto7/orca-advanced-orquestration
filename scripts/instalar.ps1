@@ -95,6 +95,19 @@ if ($Verificar) {
     Write-Host ("  {0,-24} {1}  [{2}]{3}" -f $k, ($(if ($have.Count) { $have -join ', ' } else { 'none' })), $same, $(if ($old.Count) { "  old: $($old -join ', ')" } else { '' }))
   }
   if (Test-Path "$MuseSkills\$Skill\SKILL.md") { Write-Host "  muse                     $Skill" } else { Write-Host "  muse                     missing $Skill"; $fail++ }
+  Write-Host "== Model routing table"
+  $models = "$Repo\skills\$Skill\models.json"
+  if (Test-Path $models) { Write-Host "  repo                     OK" } else { Write-Host "  repo                     missing models.json"; $fail++ }
+  foreach ($k in $SkillDirs.Keys) {
+    $f = "$($SkillDirs[$k])\$Skill\models.json"
+    $ok = (Test-Path $models) -and (Test-Path $f) -and ((Get-FileHash $f).Hash -eq (Get-FileHash $models).Hash)
+    if (-not $ok) { $fail++ }
+    Write-Host ("  {0,-24} {1}" -f $k, $(if ($ok) { 'OK' } else { 'missing models.json' }))
+  }
+  $museModels = "$MuseSkills\$Skill\models.json"
+  $museOk = (Test-Path $models) -and (Test-Path $museModels) -and ((Get-FileHash $museModels).Hash -eq (Get-FileHash $models).Hash)
+  if (-not $museOk) { $fail++ }
+  Write-Host ("  {0,-24} {1}" -f 'muse', $(if ($museOk) { 'OK' } else { 'missing models.json' }))
   if ($Muse) { & $Muse skills list 2>$null | Select-String "^(orca-cli|orchestration|$Skill|orquestration-avanced|orquestration)\t" | ForEach-Object { "    " + ($_.Line -split "`t")[0] } }
   Write-Host "== Orca orchestration link"
   foreach ($d in @($SkillDirs.Values) + @($MuseSkills)) {

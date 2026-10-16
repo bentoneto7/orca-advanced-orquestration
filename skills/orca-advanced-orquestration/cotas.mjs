@@ -25,6 +25,7 @@ import {
   resolveLedgerPath,
   resolveQuotaBefore,
 } from './ledger.mjs';
+import { chooseModel, classifyTier, escalateTier, estimateModelCosts, loadModels, renderArgs, resolveModelsPath } from './models.mjs';
 
 // Model names and relative capacities. Shares follow remaining quota (headroom x pace x capacity).
 // Capacities are 1 so plan size does not park the wave on claude and codex.
@@ -364,6 +365,9 @@ function recordCommand(argv) {
       ai: flags.ai,
       task: flags.task,
       size: flags.size,
+      tier: flags.tier === true ? undefined : flags.tier,
+      model: flags.model === true ? undefined : flags.model,
+      ok: flags.failed === true || flags.failed === 'true' ? false : true,
       tokens: flags.tokens,
       quotaAfter,
       quotaBefore: resolveQuotaBefore({
@@ -395,6 +399,19 @@ function nextCommand(argv) {
   }
   const ledgerPath = flags.ledger || resolveLedgerPath();
   const { rows } = readLedger(ledgerPath);
+  let tier = classifyTier({
+    size: flags.size === true ? undefined : flags.size,
+    files: flags.files === true ? undefined : flags.files,
+    text: flags.title === true ? '' : (flags.title || ''),
+    tier: flags.tier === true ? undefined : flags.tier,
+  });
+  if (flags['retry-of'] && flags['retry-of'] !== true) {
+    let previous = null;
+    for (let i = rows.length - 1; i >= 0; i--) {
+      if (rows[i].task === flags['retry-of']) { previous = rows[i]; break; }
+    }
+    tier = escalateTier(previous?.tier || previous?.size || tier);
+  }
   const estimates = estimateCosts(rows, {
     decay: CONFIG.ledgerDecay,
     quotaCost: CONFIG.defaultQuotaCost,
@@ -405,7 +422,7 @@ function nextCommand(argv) {
     pick = pickNext({
       agents: report.agents,
       estimates,
-      size: flags.size,
+      size: tier,
       coordinator: flags.coordinator,
       taken: parseTaken(flags.taken),
       capPercent: CONFIG.shareCapPercent,
@@ -414,6 +431,31 @@ function nextCommand(argv) {
   } catch (e) {
     console.error(e && e.message ? e.message : e);
     process.exit(1);
+  }
+  let table = null;
+  if (pick.next) {
+    try {
+      const modelsPath = flags.models && flags.models !== true ? flags.models : resolveModelsPath();
+      table = loadModels(modelsPath);
+    } catch (e) {
+      console.error(`cotas: warning: ${e && e.message ? e.message : e}. No model args; the CLI default is used.`);
+    }
+  }
+  if (pick.next) {
+    const modelEstimates = estimateModelCosts(rows, { decay: CONFIG.ledgerDecay });
+    let route = table
+      ? chooseModel({ table, ai: pick.next, tier, rows, estimates: modelEstimates })
+      : { ai: pick.next, tier, model: null, effort: null, args: [], fallback: 'no-table', samples: 0, rate: null };
+    const live = report.agents.find((item) => item.name === pick.next);
+    if (live?.model === CONFIG.models.antigravityFallback && table?.agents?.[pick.next]?.argv) {
+      route = {
+        ...route,
+        model: live.model,
+        args: renderArgs(table.agents[pick.next].argv, { model: live.model, effort: route.effort || 'high' }),
+        fallback: 'gemini-exhausted',
+      };
+    }
+    pick = { ...pick, route, tier };
   }
   if (flags.json) {
     console.log(JSON.stringify({ ...pick, ledger: ledgerPath }, null, 2));

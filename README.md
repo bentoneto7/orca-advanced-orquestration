@@ -19,6 +19,7 @@
 - [Quick start](#quick-start)
 - [100% autonomy](#100-autonomy)
 - [Coordinator promotion](#coordinator-promotion)
+- [Model routing](#model-routing)
 - [What it looks like in Orca](#what-it-looks-like-in-orca)
 - [FAQ](#faq)
 - [What's in here](#whats-in-here)
@@ -91,6 +92,12 @@ Orca has no command to re-parent a worker, so the cleanest promotion is a new se
 
 ![Coordinator promotion: the main AI runs out of quota, writes a handoff, the AI you choose binds the same Orca Run and continues as coordinator while the workers keep running](docs/img/succession.png)
 
+## Model routing
+
+Heavy models stay off simple tasks. `skills/orca-advanced-orquestration/models.json` is the only routing table, and it ships inside the skill folder the installers copy. Each AI (Claude, Codex, Cursor, Grok, Antigravity/Gemini, Muse) maps `light`, `medium`, and `heavy` to a model id and the CLI flags that pass it (`--model` for Claude, Cursor, Grok, Antigravity, and Muse; Codex uses `-m` plus a reasoning-effort config). The ids are defaults. Edit a user copy at `~/.orca-advanced/models.json`, or set `ORCA_MODELS_PATH`, when a CLI renames a model. Adding a new LLM or provider is a new entry in that file. If the table is missing, `next` warns and does not pass model args.
+
+Before each worker starts, `cotas.mjs next` classifies the task (size class, plus optional file count and the words review, debug, and architecture; `--tier` overrides) and prints the AI, the tier, the model, and ready launch args. `--coordinator` is whichever of the six is coordinating, including one promoted after the main AI runs out, and that name is never chosen as the worker. A light or medium attempt that fails is retried one tier higher, and heavy is the top. After enough history, the picker prefers the cheapest model whose success rate for that tier is at least 80% over at least 3 samples. Otherwise it uses the tier's default model. Grok's `worker-start` does not take `--model`; leave those args off and use grok's own config.
+
 ## What it looks like in Orca
 
 A real (cropped) screenshot of Orca running the skill, and the quota reading done before each wave, without spending tokens. More screenshots and the plan and report formats in [docs/IDEA.md](docs/IDEA.md).
@@ -136,12 +143,13 @@ The default team is all six. An agent leaves a run when it has no quota or when 
 | Path | What it is |
 |---|---|
 | `skills/orca-advanced-orquestration/` | The team rules: credit management by real quota, each AI's role, board, cross-review between vendors, autonomy with fixed limits and parallel execution (up to 6 workers). |
-| `skills/orca-advanced-orquestration/cotas.mjs` | Reads each AI's quota (`ORCA_CLI_COMMAND`, then `orca-ide`, then `orca`; no tokens spent) and prints the `Quotas` and `Suggested share` lines. |
+| `skills/orca-advanced-orquestration/cotas.mjs` | Reads each AI's quota (`ORCA_CLI_COMMAND`, then `orca-ide`, then `orca`; no tokens spent) and prints the `Quotas`, `Suggested share` and `Successor` lines. `next` prints the model and launch args. |
 | `skills/orchestration/` | Orca's official orchestration skill, with the "Zuuuw team" section at the end, which loads `orca-advanced-orquestration`. |
 | `config/equipe-orca.md` | Source of truth for how each AI takes the coordinator's calls. Applies only when an `ORCA_*` variable is set. |
 | `config/grok-rules-orca-equipe.md` | Generated from `equipe-orca.md` for `~/.grok/rules/`. |
 | `config/cursor-rules-orca-equipe.mdc` | Generated from `equipe-orca.md` for `~/.cursor/rules/` (not `alwaysApply`). |
 | `scripts/generate-rules.mjs` | Writes the Grok and Cursor rule files from `equipe-orca.md`. |
+| `skills/orca-advanced-orquestration/models.json` | Model routing table shipped with the skill. `ORCA_MODELS_PATH` or `~/.orca-advanced/models.json` overrides it. |
 | `config/grok-config.toml.example` | Suggested snippet for `~/.grok/config.toml`. |
 | `config/orchestration-hook.md` | The "Zuuuw team" section the script appends to Orca's skill. |
 | `scripts/instalar.sh` | Installs everything in every AI on macOS/Linux (`--verificar` or `--check` only checks). Needs python3. |
