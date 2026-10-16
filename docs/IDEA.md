@@ -29,7 +29,7 @@ The pillars of the idea:
 
 1. **Parallelism.** Up to 6 workers at the same time, each in its own git worktree. With **Nested worker depth = 2**, a worker with a big task can also open up to 2 support sub-agents.
 2. **Spread by remaining quota.** The coordinator (Claude or Codex) only plans, reviews and delegates. Implementation is split across every AI that still has quota, in proportion to headroom, and no single AI takes more than about 35% of a wave when at least three have quota. Heavy tasks go to whichever AI has the most headroom.
-3. **Scoped autonomy.** Sub-agents execute routine work without asking the user: they obey the coordinator, stay inside a scoped permission mode, and do not use bypass flags. Chrome autopilot stays off unless you opt in with a separate unlogged browser profile (see [100% autonomy](#100-autonomy)).
+3. **100% autonomy.** Sub-agents execute everything on their own, with no confirmations: they obey the coordinator, never ask the user and, with Chrome unlocked, act in the browser without asking for each click. You do not need to watch anything (see [100% autonomy](#100-autonomy)).
 4. **Cross-review.** One AI's work is reviewed by an AI from another vendor.
 5. **Credit management.** The split follows each AI's real quota and spending pace, so none runs out before its reset.
 6. **Token economy.** Short handoffs, compact rules and no re-reading of large files.
@@ -87,7 +87,7 @@ A real screenshot of the Orca window, cropped to show only the structure. Each t
 - **No single point of failure.** If an AI hits its limit, gets logged out or hangs, the task moves right away to the next one with headroom. The work goes on.
 - **Less bias.** The reviewer comes from another vendor, trained differently. Mistakes the same AI that wrote the code would miss have a better chance of showing up.
 - **Combined strengths.** Each AI does what it does best: Codex and Claude on the heavy work, Cursor on the interface, Grok on research and critique, Antigravity on broad code reading, Muse on scoped parts.
-- **Scoped autonomy.** No sub-agent stops to ask the user about routine work inside its worktree. Chrome clicks are opt-in, on a separate unlogged profile. Work flows from request to delivery while you do something else.
+- **100% autonomy.** No sub-agent stops to wait for a confirmation, not even to click in Chrome. Work flows from request to delivery while you do something else.
 
 > **Example (illustrative):** for a feature with front-end, back-end and tests, a single AI would do research, back-end, front-end, tests and review in sequence. In the team, Antigravity maps the code while Grok researches. Then Codex builds the back-end while Cursor builds the interface, and each reviews the other's work.
 
@@ -116,7 +116,7 @@ A real reading taken on the PC on Oct 8, 2026, at 7:28 PM (Brasília time). It c
 ## 100% autonomy
 
 > [!IMPORTANT]
-> **Sub-agents do routine work without asking the user.** They obey the coordinator, stay inside a scoped permission mode, and do not use bypass flags. You make the request and get the delivery.
+> **Sub-agents execute everything on their own, with no confirmations.** They obey the coordinator 100%, never ask the user and nothing stops the run. You make the request and get the delivery.
 
 ![100% autonomy: request, coordinator, sub-agents executing in parallel, cross-review and delivery with zero confirmations; the no-approval flags of each AI and Chrome on autopilot](img/autonomy.png)
 
@@ -128,58 +128,18 @@ flowchart LR
     R --> E[Delivered]
 ```
 
-### Scoped permissions
+### Unlocked AIs
 
-Do not pass bypass flags (`--dangerously-skip-permissions`, `--dangerously-bypass-approvals-and-sandbox`, `--yolo`, `--force`, or Grok `bypassPermissions`). Each CLI runs in a scoped mode, plus its own deny rules where it has them.
+In Orca, each agent runs with the arguments that skip every confirmation:
 
-| AI | Launch |
+| AI | Argument |
 |---|---|
-| Claude | `--permission-mode acceptEdits` and the `permissions.deny` list below in `~/.claude/settings.json` |
-| Codex | `--full-auto` (workspace-write sandbox). If Codex warns that `--full-auto` is deprecated, use `--sandbox workspace-write`. The sandbox is the native boundary: shell writes stay in the workspace. |
-| Cursor | `--sandbox enabled`, with `approvalMode` set to `auto-review` or `allowlist` in `~/.cursor/cli-config.json`. Deny rules live in `permissions.deny`. |
-| Grok | `--permission-mode auto` and `yolo = false` in `~/.grok/config.toml` (see [`config/grok-config.toml.example`](../config/grok-config.toml.example)) |
-| Antigravity | default approval. Do not pass `--dangerously-skip-permissions`. |
-| Muse | default permission mode. Do not pass `--yolo`. Where Muse exposes a permissions file, deny the same classes as Claude. |
-
-Claude deny list (`~/.claude/settings.json`). `acceptEdits` auto-accepts edits in the working directory and still honors deny rules. `Bash(rm -rf *)` blocks recursive deletes, including paths outside the worktree:
-
-```json
-{
-  "permissions": {
-    "defaultMode": "acceptEdits",
-    "deny": [
-      "Bash(git push origin main*)",
-      "Bash(rm -rf *)",
-      "Read(~/.ssh/**)",
-      "Edit(~/.ssh/**)",
-      "Read(**/.env*)",
-      "Edit(**/.env*)"
-    ]
-  }
-}
-```
-
-Cursor deny list (`~/.cursor/cli-config.json`), in that CLI's token syntax:
-
-```json
-{
-  "version": 1,
-  "approvalMode": "auto-review",
-  "sandbox": { "mode": "enabled" },
-  "permissions": {
-    "allow": [],
-    "deny": [
-      "Shell(git:push origin main*)",
-      "Shell(rm)",
-      "Read(~/.ssh/**)",
-      "Read(**/.env*)",
-      "Write(**/.env*)"
-    ]
-  }
-}
-```
-
-Codex does not use that JSON list. `--full-auto` selects the workspace-write sandbox (`--sandbox workspace-write` is the current spelling when the compatibility flag warns).
+| Claude | `--dangerously-skip-permissions` |
+| Codex | `--dangerously-bypass-approvals-and-sandbox` |
+| Cursor | `--yolo` |
+| Grok | `--permission-mode bypassPermissions` |
+| Antigravity | `--dangerously-skip-permissions` |
+| Muse | `--yolo` |
 
 ### The coordinator is in charge
 
@@ -187,21 +147,19 @@ Codex does not use that JSON list. `--full-auto` selects the workspace-write san
 - **They never ask the user.** You do not watch the sub-agents, so nobody stops to wait for you. Scope doubts go to the coordinator with `orca orchestration ask`; with no answer, the sub-agent picks the safest reversible option, logs it and moves on.
 - **Routine gates resolved by the coordinator itself.** Architecture, refactoring, deleting code inside the worktree or creating a new migration: it decides alone, logs it on the board with `gate-create` + `gate-resolve` and moves on.
 
-### Chrome (opt-in)
+### Unlocked Chrome
 
-Browser autopilot is off unless you turn it on. Do not point it at the Chrome profile you use every day.
+The browser runs on autopilot too, without asking for each click:
 
-To opt in, create a separate browser profile that is not logged into personal accounts (no mail, bank, or cloud sessions), then:
+- **Claude:** the **Claude in Chrome** extension is installed, turns on by itself and opens in auto mode.
+- **Codex:** the `chrome`, `browser` and `computer-use` plugins are enabled in Codex's configuration.
+- **Orca:** remote browser access is enabled.
 
-- **Claude:** install the **Claude in Chrome** extension in that profile, and turn on auto mode only there.
-- **Codex:** enable the `chrome`, `browser` and `computer-use` plugins only for that same profile.
-- **Orca:** leave remote browser access off until that profile is the one in use.
-
-The other AIs stay in the terminal. Visual QA is optional, not part of the default run.
+With that, Claude and Codex open, read and act in your Chrome on their own: they browse, click, test pages and check the deployed interface. Visual QA, research and interface tests run with no confirmations. Today Claude and Codex are the ones with this Chrome access; the other AIs work through the terminal.
 
 ### Why it pays off
 
-- **Nothing stops the run.** Routine work inside the worktree does not wait for a confirmation, so the waves run in parallel from start to finish.
+- **Nothing stops the run.** With no confirmations along the way, the waves run in parallel from start to finish.
 - **You are free.** No need to watch six AIs or approve step by step.
 - **Traceable decisions.** What the coordinator decides alone is logged on the board and shows up in the report under "Decisions taken alone".
 - **Reversible by design.** Each sub-agent works in its own worktree and branch, so anything can be thrown away.

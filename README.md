@@ -9,7 +9,7 @@
 
 ## What is this
 
-`orca-advanced-orquestration` is a **multi-agent orchestration** setup for **AI coding agents**. One request to the `/orca-advanced-orquestration` skill splits the work across **Claude Code**, **OpenAI Codex CLI**, **Cursor CLI**, **Grok CLI**, **Gemini via the Antigravity CLI** and **Muse**, running as **parallel agents** in separate **git worktrees** inside [Orca](https://github.com/stablyai/orca). Before every wave it reads each agent's real usage with zero-token commands, so the work follows each subscription's **quota and rate limits**: whoever has more headroom gets more work, no single AI takes more than about 35% of a wave when the rest of the team has quota, and an agent that hits its limit is replaced on the spot. The coordinator only plans and reviews. Sub-agents run in a scoped permission mode (no bypass flags), obey the coordinator and review each other across vendors.
+`orca-advanced-orquestration` is a **multi-agent orchestration** setup for **AI coding agents**. One request to the `/orca-advanced-orquestration` skill splits the work across **Claude Code**, **OpenAI Codex CLI**, **Cursor CLI**, **Grok CLI**, **Gemini via the Antigravity CLI** and **Muse**, running as **parallel agents** in separate **git worktrees** inside [Orca](https://github.com/stablyai/orca). Before every wave it reads each agent's real usage with zero-token commands, so the work follows each subscription's **quota and rate limits**: whoever has more headroom gets more work, no single AI takes more than about 35% of a wave when the rest of the team has quota, and an agent that hits its limit is replaced on the spot. The coordinator only plans and reviews. Sub-agents run with no confirmation prompts, obey the coordinator and review each other across vendors.
 
 ![Diagram of the team dynamics: one request, a coordinator that reads quotas, up to six parallel workers in git worktrees, cross-review and delivery](docs/img/dynamics.png)
 
@@ -31,7 +31,7 @@
 - **Unbiased cross-review.** Every delivery is reviewed by an AI from another vendor, which does not know who wrote it.
 - **Credit management with healthy pacing.** Each AI's real quota is read before every wave, without spending tokens. Whoever has more headroom gets more work, whoever is ahead of its window's pace gets less, no AI takes more than about 35% of a wave when at least three have quota, and Claude and Codex keep 15% for critical review.
 - **Automatic reassignment.** If an AI hits its limit mid-run, the task moves right away to the next one with headroom, and the AI without quota sits out until its reset.
-- **Scoped autonomy.** Sub-agents do routine work without asking the user, inside each CLI's permission mode and deny rules. Chrome autopilot is opt-in, on a separate browser profile that is not logged in. Only main, deploy and production end up as a ready PR in the report.
+- **100% autonomy.** Sub-agents execute everything without asking for confirmation, and Claude and Codex act in Chrome on their own. Only main, deploy and production end up as a ready PR in the report.
 - **Token economy.** Replies of up to 15 lines, short handoffs and the cheapest model that does each task.
 - **Installers for macOS, Linux and Windows.** One command installs and checks everything in every AI.
 
@@ -71,7 +71,7 @@ The installer also removes the old `orquestration` and `orquestration-avanced` s
 
 ## 100% autonomy
 
-**Sub-agents do routine work without asking the user.** Each AI runs in a scoped permission mode (Claude `--permission-mode acceptEdits` plus `permissions.deny`, Codex `--full-auto` / workspace-write sandbox, Cursor `--sandbox enabled` with deny rules, Grok `permission_mode = "auto"`, Antigravity and Muse on their default modes). Do not pass `--dangerously-skip-permissions`, `--dangerously-bypass-approvals-and-sandbox`, `--yolo` or `--force`. The coordinator only plans, reviews and delegates. Chrome autopilot is opt-in and must use a separate browser profile that is not logged into personal accounts. Details in [docs/IDEA.md](docs/IDEA.md#100-autonomy).
+**Sub-agents execute everything on their own, with no confirmations.** Each AI runs in Orca with the arguments that skip approvals (Claude `--dangerously-skip-permissions`, Codex `--dangerously-bypass-approvals-and-sandbox`, Cursor `--yolo`, Grok `--permission-mode bypassPermissions`, Antigravity `--dangerously-skip-permissions`, Muse `--yolo`), obeys the coordinator 100% and never asks the user. The coordinator only plans, reviews and delegates, and resolves routine gates itself. Chrome runs on autopilot too: Claude uses the Claude in Chrome extension in auto mode and Codex has the `chrome`, `browser` and `computer-use` plugins, so both browse, click and test pages without asking for each click. Nothing stops the run, from request to delivery. Details in [docs/IDEA.md](docs/IDEA.md#100-autonomy).
 
 ![100% autonomy: request, coordinator, sub-agents executing in parallel, cross-review and delivery with zero confirmations; the no-approval flags of each AI and Chrome on autopilot](docs/img/autonomy.png)
 
@@ -120,7 +120,7 @@ Yes, any of the six. Open a new session of the AI you want in Orca, in the same 
 Through the Antigravity CLI, which uses your Google account login. The Gemini CLI is left out because it no longer accepts personal Google account logins, only API keys. When the Gemini quota runs out, Antigravity can keep working with Claude Sonnet from its own "Claude and GPT models" bucket.
 
 **Do the sub-agents ask for confirmation?**
-Routine work, yes. Each agent runs in a scoped permission mode with native deny rules (Claude `permissions.deny` for `git push origin main`, `rm -rf`, `~/.ssh/**` and `**/.env*`; Codex's workspace-write sandbox; Cursor `permissions.deny`). Do not pass `--dangerously-skip-permissions` or `--yolo`. Fixed safety limits (merge to main, deploy, production, real data, real-database migrations, secrets, deleting files outside the worktree) are left ready in the final report instead.
+No. Each agent runs with its no-approval flag (Claude and Antigravity `--dangerously-skip-permissions`, Codex `--dangerously-bypass-approvals-and-sandbox`, Cursor and Muse `--yolo`, Grok `--permission-mode bypassPermissions`), obeys the coordinator and never asks the user: zero confirmations. The only exception is a short list of fixed safety limits (merge to main, deploy, production, real data, real-database migrations, secrets, deleting files outside the worktree), which are left ready in the final report instead.
 
 **Do I need API keys?**
 No. Every CLI logs in through the browser with your own subscription. Optional: a Docker MCP Toolkit profile named `orca` exposes context7 and sequentialthinking through `docker mcp gateway run --profile orca`. Store those server secrets with `docker mcp secret set`, not in a plaintext config file.
