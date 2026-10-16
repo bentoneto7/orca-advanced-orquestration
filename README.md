@@ -18,6 +18,7 @@
 - [Main benefits](#main-benefits)
 - [Quick start](#quick-start)
 - [100% autonomy](#100-autonomy)
+- [Coordinator promotion](#coordinator-promotion)
 - [What it looks like in Orca](#what-it-looks-like-in-orca)
 - [FAQ](#faq)
 - [What's in here](#whats-in-here)
@@ -76,6 +77,20 @@ The installer also removes the old `orquestration` and `orquestration-avanced` s
 
 <sub>Only exception, for safety: merge to main, deploy, production, real data, migrations on a real database and secrets are left ready as a PR or command in the final report. The work never stops.</sub>
 
+## Coordinator promotion
+
+When the main AI runs out of quota, any of the six AIs can take over as coordinator: **claude, codex, cursor, grok, antigravity or muse**. You choose who, and your choice always wins:
+
+```text
+/orca-advanced-orquestration promote <agent>
+```
+
+Type `promote` with no name and the skill suggests the AI with the best status and the most quota headroom (`cotas.mjs` prints it on the `Successor` line). The outgoing coordinator writes `.orca/handoff.md` (plan, waves, workers, open gates, pending approvals, last quota reading) before it runs out. If it already died, the successor rebuilds the same state from Orca's board, `worker-list` and the git branches. The successor then binds the same Orca Run with `orca orchestration run-use`, re-reads the quotas and replans. It gets the full coordinator rank: waves, gates, cross-review and the final report. Running workers keep reporting to the Run, so nothing is restarted.
+
+Orca has no command to re-parent a worker, so the cleanest promotion is a new session of the chosen AI: open it in Orca in the same project and type the command above. The old coordinator sits out until its quota resets, then comes back as a worker or reviewer. Fixed safety limits do not change with the rank. Details: [SKILL.md section 12](skills/orca-advanced-orquestration/SKILL.md#12-coordinator-promotion-succession).
+
+![Coordinator promotion: the main AI runs out of quota, writes a handoff, the AI you choose binds the same Orca Run and continues as coordinator while the workers keep running](docs/img/succession.png)
+
 ## What it looks like in Orca
 
 A real (cropped) screenshot of Orca running the skill, and the quota reading done before each wave, without spending tokens. More screenshots and the plan and report formats in [docs/IDEA.md](docs/IDEA.md).
@@ -97,6 +112,9 @@ No. `cotas.mjs` reads `orca account list --json`, which is a status command. The
 
 **What happens when an agent hits a rate limit mid-task?**
 The worker reports `NO QUOTA until <reset>`, the coordinator marks it as excluded until the reset and reassigns the task right away (`worker-start --retry-of`) to the agent with the most headroom, without asking you.
+
+**My main AI ran out of credits. Can another AI take over as coordinator?**
+Yes, any of the six. Open a new session of the AI you want in Orca, in the same project, and type `/orca-advanced-orquestration promote <agent>` (for example `promote codex` or `promote grok`). It reads the handoff the old coordinator left in `.orca/handoff.md`, or rebuilds it from the board, binds the same Orca Run with `orca orchestration run-use` and continues as coordinator. With no name, the skill suggests the AI with the most headroom. See [Coordinator promotion](#coordinator-promotion).
 
 **Can I use Gemini?**
 Through the Antigravity CLI, which uses your Google account login. The Gemini CLI is left out because it no longer accepts personal Google account logins, only API keys. When the Gemini quota runs out, Antigravity can keep working with Claude Sonnet from its own "Claude and GPT models" bucket.

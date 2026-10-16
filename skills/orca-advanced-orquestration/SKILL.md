@@ -6,12 +6,15 @@ description: >-
   a task across AIs or set up the board. When invoked, it reads each AI's real
   quota, breaks the task down and distributes it across the AIs with quota
   (claude, codex, cursor, grok, antigravity, muse) in parallel, weighted by each
-  one's headroom, with sub-agent expansion. Loads Orca's orchestration skill.
+  one's headroom, with sub-agent expansion. Also handles coordinator promotion:
+  /orca-advanced-orquestration promote <agent> hands the coordinator role to any of
+  the six AIs when the main AI runs out of quota. Loads Orca's orchestration skill.
 ---
 
 # /orca-advanced-orquestration - multi-AI team in Orca
 
 ## 0. Automatic mode (default behavior)
+When invoked with `promote [<agent>]`, or when the coordinator hits >= 95% / a rate limit, go to section 12 instead.
 When invoked, do NOT ask how to split the work. Run it directly:
 1. Setup (section 1) and quota reading (section 2).
 2. Break the task down and write the plan (section 4), with the Quotas and Coverage lines.
@@ -27,8 +30,8 @@ Never stop to ask the user: they do not watch the workers. When in doubt, pick t
 
 ## 2. Credit management (real quota + healthy pacing)
 Quota reading (zero token cost), before the plan and before EVERY wave:
-- `node <this skill's folder>/cotas.mjs` -> prints the `Quotas` line (usage per window, pace, reset, status and each AI's share) and a `Suggested share` line. `--json` for details. The CLI is `$ORCA_CLI_COMMAND`, then `orca-ide`, then `orca`.
-- Per-task rebalance (the wave plan is the initial guess only). Before every `worker-start`: `node <this skill's folder>/cotas.mjs next --size <light|medium|heavy> --coordinator <claude|codex> [--taken ai=n,ai=n]`. It rereads live quota, subtracts that AI's decayed average cost for the size class (empty ledger defaults: light 1, medium 3, heavy 8 quota points), keeps the 15% claude/codex reserve and the 35% wave cap, and prints `Next` plus `Fallback`. Never pass the coordinator as the implementation agent. After every `worker_done`: `node <this skill's folder>/cotas.mjs record --ai <agent> --task <id> --size <class> [--tokens <n>] [--quota-before <pct from the next reading>]`. One JSON line is appended to `~/.orca-advanced/usage.jsonl` (`ORCA_USAGE_LEDGER` overrides the path). Quota after comes from `account list`. Tokens are optional.
+- `node <this skill's folder>/cotas.mjs` -> prints the `Quotas` line (usage per window, pace, reset, status and each AI's share), a `Suggested share` line and a `Successor` line (section 12). `--json` for details. The CLI is `$ORCA_CLI_COMMAND`, then `orca-ide`, then `orca`.
+- Per-task rebalance (the wave plan is the initial guess only). Before every `worker-start`: `node <this skill's folder>/cotas.mjs next --size <light|medium|heavy> --coordinator <you> [--taken ai=n,ai=n]`. It rereads live quota, subtracts that AI's decayed average cost for the size class (empty ledger defaults: light 1, medium 3, heavy 8 quota points), keeps the 15% claude/codex reserve and the 35% wave cap, and prints `Next` plus `Fallback`. Never pass the coordinator as the implementation agent. After every `worker_done`: `node <this skill's folder>/cotas.mjs record --ai <agent> --task <id> --size <class> [--tokens <n>] [--quota-before <pct from the next reading>]`. One JSON line is appended to `~/.orca-advanced/usage.jsonl` (`ORCA_USAGE_LEDGER` overrides the path). Quota after comes from `account list`. Tokens are optional.
 - Without node: `orca account list --json` -> `result.rateLimits` (claude/codex: 5h session + weekly; cursor: monthly, bucket "Cursor Models"; grok: weekly; antigravity: buckets "Gemini Models" and "Claude and GPT models"). Antigravity also: `agy -p /usage --output-format json --print-timeout 20s`.
 - Muse has no meter. Never spend tokens to measure quota (no free-form prompt just to check).
 
@@ -43,7 +46,7 @@ Split by remaining quota: each AI's suggested share is proportional to `headroom
 - Healthy pacing (pace = usage - % of the window already elapsed): ahead (pace > 0) gets less; behind with headroom gets more. Goal: no AI runs out before its reset.
 - Capacity defaults to 1 for every metered AI (config block at the top of `cotas.mjs`). Muse is 70% of the median of cursor and grok (no meter: tightly scoped tasks).
 - Cap: no suggested share exceeds 35% when at least 3 AIs have quota. With fewer, the cap is lifted.
-- The coordinator (the claude or codex session running this skill) only plans, reviews and delegates. It does not take implementation tasks. Heavy tasks go to the AI on the `Heavy` line (normal status, most headroom). If that AI is the coordinator, give the heavy task to the next-highest headroom.
+- The coordinator (the session running this skill: claude or codex by default, or any AI promoted under section 12) only plans, reviews and delegates. It does not take implementation tasks. Heavy tasks go to the AI on the `Heavy` line (normal status, most headroom). If that AI is the coordinator, give the heavy task to the next-highest headroom.
 - Every AI with quota gets at least one task only when the job has 4 or more subtasks. Smaller jobs follow the suggested share and may leave an AI idle.
 - Review of critical work stays with claude or codex (whichever has more headroom), using the reserve. At >= 80% that AI only reviews and sends short messages.
 - Antigravity without Gemini quota but with headroom in "Claude and GPT models": use `--model claude-sonnet-4-6` in `worker-start` (models: `agy models`). Do not use `gemini` (API only).
@@ -74,7 +77,7 @@ Save it on the board; each line becomes a task. Hierarchical IDs show the expans
 
 ```
 PLAN /orca-advanced-orquestration - <title>
-Coordinator: <claude|codex>   Sub-agent depth: <1|2>
+Coordinator: <agent> (promoted from <agent> at <time>, if any)   Sub-agent depth: <1|2>
 Quotas: <cotas.mjs Quotas line: agent usage 5h/weekly (pace, reset) status -> share%>
 Suggested share: <cotas.mjs Suggested share line>
 
@@ -133,7 +136,7 @@ Depth in Settings > Orchestration > Nested worker depth.
 - When reaching a fixed limit, leave it ready (branch, PR, command) and list it under "Pending approval" in the report. Do not stop the rest.
 
 ## 10. Final delivery
-Summary: executed plan (Quotas and Coverage), what each AI did, which version won and why, tests, decisions taken alone, "Pending approval" (with a ready command or PR) and the Credits block: usage per agent at the start and at the end (run `cotas.mjs` again), who was excluded and until when, reassignments due to rate limits and next resets.
+Summary: executed plan (Quotas and Coverage), what each AI did, which version won and why, tests, decisions taken alone, "Pending approval" (with a ready command or PR) and the Credits block: usage per agent at the start and at the end (run `cotas.mjs` again), who was excluded and until when, reassignments due to rate limits, next resets and every succession (`Succession: <old> -> <new> at <time>, <reason>, chosen by <user|quota>`).
 
 ## 11. When you are a worker
 - Reply through the same channel (reply / worker_done) in up to 15 lines. If the tool reports a token count, add `tokens <n>` on its own so the coordinator can pass `--tokens` to `record`.
@@ -141,3 +144,58 @@ Summary: executed plan (Quotas and Coverage), what each AI did, which version wo
 - Obey the coordinator 100%; never ask the user. Scope doubt: `orca orchestration ask`; with no answer, take the safest option and move on.
 - Quota or rate-limit error: stop and immediately report `NO QUOTA until <reset>` to the coordinator, so it can reassign.
 - Fixed limits from section 9: do not execute; prepare and report.
+- If the user (or the outgoing coordinator's handoff) promotes you, you stop being a worker: settle your current Dispatch first (section 12), then follow sections 0 to 10 as the coordinator.
+
+## 12. Coordinator promotion (succession)
+Any of the six AIs can be promoted to coordinator: claude, codex, cursor, grok, antigravity or muse. **The user's choice always wins.** Only when the user names nobody, use the `Successor` line: `node <this skill's folder>/cotas.mjs successor --from <outgoing> [--to <agent>]` (best status, then most headroom; the outgoing AI is skipped; muse has no meter, so it is suggested only as the last resort).
+
+**Triggers**
+- The user types `/orca-advanced-orquestration promote <agent>` (or `promote` alone: use the suggestion).
+- The coordinator's worst window reaches >= 95%, or it gets a quota/rate-limit error (`NO QUOTA until <reset>`). At >= 90% it writes the handoff early (below) so nothing is lost if it dies.
+
+**What Orca really supports (checked against Orca's CLI, Oct 2026)**
+- A Run is the durable namespace and inbox. Workers report to the Run mailbox (`run:<id>`), not to a coordinator terminal, so they keep working while the coordinator changes.
+- `orca orchestration run-use --id <run_id> --json` binds the terminal that runs it as the coordinator of an existing Run. Orca records every terminal that was bound to a Run and bumps a consumer generation, so a Run can change coordinator. Never bind while the old coordinator is still actively coordinating. (`--takeover-legacy` is only for legacy adopted Runs.)
+- There is no command to re-parent a worker or move a Dispatch. A worker that creates its own Run becomes a nested coordinator, but nested workers obey Settings > Orchestration > Nested worker depth, and a new Run does not reset depth.
+- So the clean promotion is a fresh top-level session of the chosen AI that binds the same Run. Promoting a worker in place also works through `run-use` from its own terminal, but its new workers may count as nested; if `worker-start` returns `nested_worker_depth_exceeded`, switch to a fresh session.
+
+**1. Handoff (outgoing coordinator, while it still can)**
+Write `.orca/handoff.md` at the root of the coordinator's worktree (keep it out of git: add `.orca/` to `.git/info/exclude`):
+```
+HANDOFF /orca-advanced-orquestration - <title>
+Run: <run_id>   Outgoing: <agent> (<reason>, quota resets <time>)   Successor: <agent> (<user choice|most headroom>)
+Plan: <current plan with waves; done / running / pending per task>
+Workers: <task id, agent, dispatch id, worktree/branch, state>
+Gates and questions: <open gates, unanswered asks>
+Pending approval: <items from section 9, with the ready command or PR>
+Quotas: <latest cotas.mjs Quotas line>
+Next step: <what the successor does first>
+```
+Then enqueue a pointer in the Run inbox: `orca orchestration send --to run:<run_id> --type handoff --subject "Coordinator handoff" --body "<path + next step>" --json`, and stop issuing orchestration commands.
+
+**2. Rebuild (if the old coordinator died before writing it)**
+The successor rebuilds the state read-only: `orca orchestration run-list --json` (find the Run by objective), `run-show --id <run_id> --json`, `task-list --run <run_id> --json`, `worker-list --run <run_id> --json`, `gate-list --run <run_id> --json`, plus `git worktree list` and `git branch`. Then write `.orca/handoff.md` itself.
+
+**3. Promotion (rank upgrade)**
+The successor, in its own terminal:
+1. If it is a dispatched worker, settles its Dispatch first with one `worker_done` (`--outcome succeeded` or `failed` with what remains), so it is never worker and coordinator at once.
+2. Loads `orchestration` and this skill, reads `.orca/handoff.md` and binds the Run: `orca orchestration run-use --id <run_id> --json`, then `orca orchestration check --json` to process the pending mail.
+3. From now on it is the coordinator with full powers: sections 0 to 10 apply to it and section 11 no longer does. It dispatches waves, resolves routine gates, runs cross-review and writes the final report. It plans, reviews and delegates only (`cotas.mjs next --coordinator <self>`).
+4. Re-reads the quotas with `cotas.mjs` and replans the remaining work with the `Coordinator` line updated.
+5. Logs the succession on the board and in the Credits block.
+
+**After the promotion**
+- The old coordinator is `excluded` until its reset, then returns as a worker or reviewer in its normal role. It only coordinates again if the user promotes it.
+- If the successor is not claude or codex, it applies the same 15% coordination reserve to itself: at >= 80% it coordinates only, and at >= 95% it promotes the next successor the same way.
+- Fixed limits from section 9 do not change with the rank: they still go to "Pending approval".
+
+**Per-agent notes (real limits)**
+- Orca does not tie the coordinator role to a vendor: any agent terminal that runs the Orca CLI can bind a Run.
+- Only claude and codex have Chrome set up. A cursor, grok, antigravity or muse coordinator delegates browser work to a claude or codex worker.
+- `worker-start --model/--effort` works for claude, codex, cursor, antigravity and muse workers; grok workers start with the model from their own config.
+- muse has no quota meter: it is never auto-suggested before the metered AIs, and its exhaustion only shows up as rate-limit errors.
+- antigravity can lose its Gemini bucket; then it runs on `claude-sonnet-4-6` from the "Claude and GPT models" bucket (`cotas.mjs` prints the model).
+
+**What the user does (only when promotion needs a new session)**
+1. In Orca, open a new session of the chosen AI in the same project and worktree as the old coordinator (the same way you start a coordinator).
+2. Type `/orca-advanced-orquestration promote <agent>`. Nothing else: the AI reads the handoff (or rebuilds it), binds the Run and continues.

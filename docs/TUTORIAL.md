@@ -217,6 +217,15 @@ The coordinator then:
 5. If an AI hits its limit mid-run, moves the task right away to the next one with headroom. Routine work runs without asking the user; the fixed limits (merge to main, deploy, production, real data, migrations on a real database, secrets) are left ready under "Pending approval".
 6. Ends with a short report, including the Credits block: each AI's usage, who ran out of quota and the next resets.
 
+### When the coordinator runs out of quota (promotion)
+
+Any of the six AIs can take over as coordinator, and you choose which one:
+
+1. In Orca, open a new session of the AI you want (claude, codex, cursor, grok, antigravity or muse) in the same project and worktree as the old coordinator.
+2. Type `/orca-advanced-orquestration promote <agent>`, for example `promote codex`. With `promote` alone, the skill picks the AI with the most headroom (`node <skill folder>/cotas.mjs successor --from <old coordinator>` shows who).
+
+The new coordinator reads `.orca/handoff.md` (written by the old one before it ran out) or rebuilds it from the board, binds the same Run with `orca orchestration run-use --id <run_id>`, re-reads the quotas and continues. Running workers are not restarted. If you type the command in a worker's tab instead, that worker first closes its own task and then takes over; if Orca then refuses new workers with `nested_worker_depth_exceeded`, use a new session as in step 1.
+
 Setup complete.
 
 ---
@@ -232,5 +241,6 @@ Setup complete.
 | Grok asks for login again | `grok login` (or `grok login --device-auth`). |
 | Gemini asks for an API key | Disable Gemini in Orca and use Antigravity. |
 | Agent does not recognize `/orca-advanced-orquestration` | Refresh in Settings > Agents, open a new session and run `bash scripts/instalar.sh --verificar` (Mac) or `instalar.ps1 -Verificar` (Windows). |
+| Coordinator ran out of quota mid-run | Open a new session of the AI you want and type `/orca-advanced-orquestration promote <agent>` (see Step 9). |
 | Still seeing the old `/orquestration` or `/orquestration-avanced` | Run the installer again: it removes the old `orquestration` and `orquestration-avanced` folders. Then open new sessions. |
 | Updated Orca's skill and the link is gone | Run the installer again. |

@@ -3,7 +3,8 @@
 // Usage:
 //   node cotas.mjs [--json] [file.json]          quota snapshot (no file: `<cli> account list --json`)
 //   node cotas.mjs record --ai <ai> --task <id> --size <light|medium|heavy> [--tokens N] [--quota-before N] [--account file] [--ledger path]
-//   node cotas.mjs next --size <class> --coordinator <claude|codex> [--taken ai=n,...] [--account file] [--ledger path]
+//   node cotas.mjs next --size <class> --coordinator <ai> [--taken ai=n,...] [--account file] [--ledger path]
+//   node cotas.mjs successor [--from <outgoing coordinator>] [--to <ai the user chose>] [--json] [--account file]
 // CLI: $ORCA_CLI_COMMAND, then `orca-ide`, then `orca` (first one that exists).
 // Ledger: $ORCA_USAGE_LEDGER or ~/.orca-advanced/usage.jsonl
 // Never prints emails, ids or credentials: only percentages, resets and weights.
@@ -43,7 +44,51 @@ export const CONFIG = {
   defaultTokenCost: LEDGER_DEFAULTS.tokenCost,
 };
 
-const AGENTS = ['claude', 'codex', 'cursor', 'grok', 'antigravity', 'muse'];
+export const AGENTS = ['claude', 'codex', 'cursor', 'grok', 'antigravity', 'muse'];
+
+// Coordinator succession (SKILL.md section 12). The user's choice always wins;
+// without one, the successor is the metered AI with the best status and most headroom.
+const STATUS_RANK = { normal: 0, 'light/medium': 1, 'review only': 2 };
+const BROWSER_AGENTS = ['claude', 'codex'];
+
+export function pickSuccessor(agents, { outgoing = null, requested = null } = {}) {
+  for (const [flag, value] of [['--from', outgoing], ['--to', requested]]) {
+    if (value != null && !AGENTS.includes(value)) throw new Error(`successor: ${flag} must be one of ${AGENTS.join('|')}`);
+  }
+  const byName = Object.fromEntries(agents.map((k) => [k.name, k]));
+  const metered = agents
+    .filter((k) => k.name !== outgoing && k.status in STATUS_RANK && typeof k.headroom === 'number')
+    .sort((p, q) => STATUS_RANK[p.status] - STATUS_RANK[q.status] || q.headroom - p.headroom || p.name.localeCompare(q.name));
+  const ranked = metered.map((k) => k.name);
+  if (outgoing !== 'muse' && byName.muse) ranked.push('muse'); // no meter: last resort, or by user choice
+  const successor = requested ?? ranked[0] ?? null;
+  const reason = requested ? 'user choice' : successor ? 'most headroom' : 'nobody with quota';
+  const warnings = [];
+  const k = successor ? byName[successor] : null;
+  if (successor && successor === outgoing) warnings.push(`${successor} is the outgoing coordinator`);
+  if (k?.status === 'excluded') warnings.push(`${successor} has no quota until ${when(k.excludedUntil)}; the user's choice still wins, expect rate limits`);
+  if (k?.status === 'review only') warnings.push(`${successor} is at 80%+: coordinate only and hand off again at 95%`);
+  if (successor === 'muse') warnings.push('muse has no quota meter: watch for rate-limit errors');
+  if (successor === 'antigravity' && k?.model && k.model !== CONFIG.models.antigravityDefault) warnings.push(`antigravity runs on ${k.model} (Gemini bucket exhausted)`);
+  if (successor && !BROWSER_AGENTS.includes(successor)) warnings.push('no Chrome setup: delegate browser work to claude or codex');
+  return {
+    successor,
+    reason,
+    status: k?.status ?? null,
+    headroom: typeof k?.headroom === 'number' ? k.headroom : null,
+    alternatives: ranked.filter((name) => name !== successor),
+    warnings,
+  };
+}
+
+export function formatSuccessor(s) {
+  if (!s.successor) return 'Successor: nobody with quota - wait for the next reset';
+  const detail = [s.reason, s.status, s.headroom == null ? null : `headroom ${s.headroom}`].filter(Boolean).join(', ');
+  const then = s.alternatives.length ? s.alternatives.slice(0, 3).join(', ') : 'none';
+  const lines = [`Successor: ${s.successor} (${detail}) | then ${then}`];
+  if (s.warnings.length) lines.push(`Successor warnings: ${s.warnings.join('; ')}`);
+  return lines.join('\n');
+}
 
 export function cliCandidates(env = process.env) {
   const list = [];
@@ -230,15 +275,18 @@ export function buildReport(rl, now = Date.now()) {
   const byName = Object.fromEntries(agents.map((k) => [k.name, k]));
   const suggested = AGENTS.filter((name) => byName[name]).map((name) => `${name} ${byName[name].share}%`).join(' | ');
   const capNote = `cap ${CONFIG.shareCapPercent}% when ${CONFIG.shareCapMinAgents}+ AIs have quota`;
+  const succ = pickSuccessor(agents);
   const lines = [
     `Quotas (${when(now)}): ` + agents.map(fmt).join(' | '),
     `Suggested share: ${suggested} (${capNote}; coordinator plans/reviews only)`,
     `Heavy: ${heavy?.name ?? 'nobody with normal status - split into medium tasks'} | 15% reserve on claude/codex | pace = usage - elapsed time of the window (+ ahead)`,
+    `Successor: ${succ.successor ?? 'nobody'} | then ${succ.alternatives.slice(0, 3).join(', ') || 'none'} (if the coordinator runs out: cotas.mjs successor --from <coordinator> [--to <ai>])`,
   ];
   return {
     generatedAt: when(now),
     agents,
     heavy: heavy?.name ?? null,
+    successor: succ.successor,
     shareCapPercent: CONFIG.shareCapPercent,
     suggestedShare: Object.fromEntries(AGENTS.filter((name) => byName[name]).map((name) => [name, byName[name].share])),
     text: lines.join('\n'),
@@ -334,8 +382,8 @@ function recordCommand(argv) {
 
 function nextCommand(argv) {
   const flags = parseFlags(argv);
-  if (!flags.coordinator || flags.coordinator === true) {
-    console.error('next: pass --coordinator claude|codex (the coordinator does not take implementation)');
+  if (!AGENTS.includes(flags.coordinator)) {
+    console.error(`next: pass --coordinator ${AGENTS.join('|')} (the coordinator does not take implementation)`);
     process.exit(1);
   }
   let report;
@@ -374,8 +422,35 @@ function nextCommand(argv) {
   console.log(formatPick(pick));
 }
 
+function successorCommand(argv) {
+  const flags = parseFlags(argv);
+  let report;
+  try {
+    report = buildReport(loadRateLimits(flags.account));
+  } catch (e) {
+    console.error(`cotas: warning: ${e && e.message ? e.message : e}.`);
+    if (typeof flags.to === 'string') console.log(`Successor: ${flags.to} (user choice, quota unknown)`);
+    process.exit(typeof flags.to === 'string' ? 0 : 1);
+  }
+  let s;
+  try {
+    s = pickSuccessor(report.agents, {
+      outgoing: typeof flags.from === 'string' ? flags.from : null,
+      requested: typeof flags.to === 'string' ? flags.to : null,
+    });
+  } catch (e) {
+    console.error(e && e.message ? e.message : e);
+    process.exit(1);
+  }
+  console.log(flags.json ? JSON.stringify(s, null, 2) : formatSuccessor(s));
+}
+
 function main() {
   const args = process.argv.slice(2);
+  if (args[0] === 'successor') {
+    successorCommand(args.slice(1));
+    return;
+  }
   if (args[0] === 'record') {
     recordCommand(args.slice(1));
     return;
@@ -399,6 +474,7 @@ function main() {
       generatedAt: report.generatedAt,
       agents: report.agents,
       heavy: report.heavy,
+      successor: report.successor,
       shareCapPercent: report.shareCapPercent,
       suggestedShare: report.suggestedShare,
     }, null, 2));

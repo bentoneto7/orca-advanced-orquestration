@@ -213,6 +213,16 @@ The final report, in the skill's format, shows what each AI did and the Credits 
 
 **Only exception, for safety.** The skill keeps a few fixed limits (section 9 of `SKILL.md`): merge or push to `main`, deploy, production actions, deleting or changing real data, running a migration on a real database, touching secrets and deleting files outside the worktree. In these cases the sub-agent does not stop: it leaves the PR, branch or command ready and lists it in the final report under "Pending approval". The rest of the work goes on as usual.
 
+## Coordinator promotion
+
+The coordinator spends quota too. When the main AI runs out, the run should not stop with it. Any of the six AIs can be promoted to coordinator, and the user decides which one: `/orca-advanced-orquestration promote <agent>`. Only when the user names nobody does the skill suggest one, by status first and quota headroom second (the `Successor` line of `cotas.mjs`).
+
+Why it works in Orca: a Run is Orca's durable inbox, and the workers report to the Run, not to one coordinator terminal. `orca orchestration run-use` binds a new coordinator terminal to the same Run, so the successor inherits the board, the gates and the pending mail without restarting any worker. What Orca does not have is a way to re-parent a worker, and nested workers count against the "Nested worker depth" setting. That is why the cleanest promotion is a fresh session of the chosen AI rather than turning a running worker into a coordinator in place.
+
+The handoff is a short file, `.orca/handoff.md`: plan and waves, each worker with its branch and state, open gates, pending approvals and the last quota reading. The outgoing coordinator writes it from 90% on; if it dies first, the successor rebuilds it read-only from `task-list`, `worker-list`, `gate-list` and the git branches. The promoted AI gets the whole coordinator rank (waves, gates, cross-review, final report) and the same fixed limits. The old coordinator comes back as a worker or reviewer after its reset, and the Credits block logs the succession.
+
+![Coordinator promotion: handoff file, the AI you choose binds the same Orca Run, workers keep running](img/succession.png)
+
 ## Getting started
 
 1. Follow the [full tutorial](TUTORIAL.md): Orca, CLIs, logins and the installer for your system.
