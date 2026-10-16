@@ -89,39 +89,10 @@ If the Grok login drops (it happens when the token expires), just run `grok logi
 
 1. In Orca, open **Settings > Agents** and click **Refresh**. Claude, Codex, Cursor, Grok, Antigravity and Muse should show up.
 2. **Disable Gemini** on that screen, if it shows up.
-3. **Agent Permissions**: do not leave the agents on Orca's "Yolo" bypass. Use the scoped launch arguments in step 6 below. Switch to **Manual** only if you would rather confirm each action yourself.
+3. **Agent Permissions**: Orca's default is "Yolo" (agents execute without asking for confirmation). If you would rather confirm each action, switch to **Manual**.
 4. When opening Orca for the first time, accept importing the accounts from `~/.claude` and `~/.codex`. Orca's Usage panel shows the quota of Claude, Codex, Cursor, Grok and Antigravity, and that is the information the skill uses to split the work (Muse has no meter).
 5. In **Settings > Orchestration**, set **Nested worker depth = 2**. That way the coordinator creates workers, and a worker with a big task can open up to 2 support sub-agents. With 1, only the coordinator creates workers and the skill breaks everything down itself.
-6. For workers to run routine commands without a prompt, set scoped arguments. Do not pass `--dangerously-skip-permissions`, `--dangerously-bypass-approvals-and-sandbox`, `--yolo` or `--force`.
-
-   | AI | Arguments |
-   |---|---|
-   | Claude | `--permission-mode acceptEdits`, plus `permissions.deny` in `~/.claude/settings.json` |
-   | Codex | `--full-auto` (workspace-write sandbox). If the CLI warns that the flag is deprecated, use `--sandbox workspace-write` |
-   | Cursor | `--sandbox enabled`, and `approvalMode` `auto-review` or `allowlist` in `~/.cursor/cli-config.json` |
-   | Grok | `--permission-mode auto` with `yolo = false` (see [`config/grok-config.toml.example`](../config/grok-config.toml.example)) |
-   | Antigravity | default approval |
-   | Muse | default permission mode |
-
-   Claude deny list:
-
-   ```json
-   {
-     "permissions": {
-       "defaultMode": "acceptEdits",
-       "deny": [
-         "Bash(git push origin main*)",
-         "Bash(rm -rf *)",
-         "Read(~/.ssh/**)",
-         "Edit(~/.ssh/**)",
-         "Read(**/.env*)",
-         "Edit(**/.env*)"
-       ]
-     }
-   }
-   ```
-
-   Cursor uses the same limits in `~/.cursor/cli-config.json` (`Shell(git:push origin main*)`, `Shell(rm)`, `Read(~/.ssh/**)`, `Read(**/.env*)`, `Write(**/.env*)`). Codex's workspace-write sandbox is its native boundary. The skill still leaves merge to main, deploy, production and real-data changes ready under "Pending approval". Chrome autopilot is opt-in: use a separate browser profile that is not logged into personal accounts. Details in [docs/IDEA.md](IDEA.md#scoped-permissions).
+6. For workers to run without asking for approval, check each agent's default arguments in Orca: Claude and Antigravity with `--dangerously-skip-permissions`, Codex with `--dangerously-bypass-approvals-and-sandbox`, Cursor with `--yolo`, Grok with `--permission-mode bypassPermissions` and Muse with `--yolo`. The only exception the skill keeps, for safety, is merge to main, deploy, production actions and changes to real data: it leaves them ready and lists them under "Pending approval" in the final report, without stopping the rest.
 
 ## Step 6. Install the skills and the team rules
 
@@ -214,8 +185,17 @@ The coordinator then:
 2. Breaks the task down on its own, without asking, and writes a plan with IDs (T1, T2, T4.1...). The coordinator (Claude or Codex) only plans, reviews and delegates. Heavy tasks go to the AI with the most headroom. **Every AI with quota gets at least one task only when the job has 4 or more subtasks.** Code research and reading go to Antigravity, web research and critical review to Grok, front-end to Cursor, small tasks to Muse, and the rest follows the suggested share. The plan has the "Quotas" and "Suggested share" lines and ends with the "Coverage" line.
 3. Dispatches in waves: the tasks of each wave go out together (up to 6 at the same time, one per AI, each in its own worktree) and `--deps` holds back the ones that need to wait for another. Big tasks marked `[expandable]` can open up to 2 support sub-agents.
 4. Sends each delivery for review by an AI from another vendor, without saying who wrote it.
-5. If an AI hits its limit mid-run, moves the task right away to the next one with headroom. Routine work runs without asking the user; the fixed limits (merge to main, deploy, production, real data, migrations on a real database, secrets) are left ready under "Pending approval".
+5. If an AI hits its limit mid-run, moves the task right away to the next one with headroom. Everything runs with no confirmations; the only exception is the fixed limits (merge to main, deploy, production, real data, migrations on a real database, secrets), which are left ready under "Pending approval".
 6. Ends with a short report, including the Credits block: each AI's usage, who ran out of quota and the next resets.
+
+### When the coordinator runs out of quota (promotion)
+
+Any of the six AIs can take over as coordinator, and you choose which one:
+
+1. In Orca, open a new session of the AI you want (claude, codex, cursor, grok, antigravity or muse) in the same project and worktree as the old coordinator.
+2. Type `/orca-advanced-orquestration promote <agent>`, for example `promote codex`. With `promote` alone, the skill picks the AI with the most headroom (`node <skill folder>/cotas.mjs successor --from <old coordinator>` shows who).
+
+The new coordinator reads `.orca/handoff.md` (written by the old one before it ran out) or rebuilds it from the board, binds the same Run with `orca orchestration run-use --id <run_id>`, re-reads the quotas and continues. Running workers are not restarted. If you type the command in a worker's tab instead, that worker first closes its own task and then takes over; if Orca then refuses new workers with `nested_worker_depth_exceeded`, use a new session as in step 1.
 
 Setup complete.
 
@@ -232,5 +212,6 @@ Setup complete.
 | Grok asks for login again | `grok login` (or `grok login --device-auth`). |
 | Gemini asks for an API key | Disable Gemini in Orca and use Antigravity. |
 | Agent does not recognize `/orca-advanced-orquestration` | Refresh in Settings > Agents, open a new session and run `bash scripts/instalar.sh --verificar` (Mac) or `instalar.ps1 -Verificar` (Windows). |
+| Coordinator ran out of quota mid-run | Open a new session of the AI you want and type `/orca-advanced-orquestration promote <agent>` (see Step 9). |
 | Still seeing the old `/orquestration` or `/orquestration-avanced` | Run the installer again: it removes the old `orquestration` and `orquestration-avanced` folders. Then open new sessions. |
 | Updated Orca's skill and the link is gone | Run the installer again. |

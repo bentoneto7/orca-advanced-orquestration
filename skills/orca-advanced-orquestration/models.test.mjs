@@ -207,6 +207,35 @@ test('next prints the tier, model, and launch args, and a retry steps up', () =>
   assert.match(retry.stdout, new RegExp(`^Model: ${live.agents.cursor.tiers.medium.model}$`, 'm'));
 });
 
+test('next keeps a promoted coordinator off implementation and still prints the model', () => {
+  const live = loadModels(BUNDLED_MODELS_PATH);
+  const dir = mkdtempSync(join(tmpdir(), 'models-coord-'));
+  const heavy = spawnSync(process.execPath, [
+    cotasPath, 'next',
+    '--size', 'heavy',
+    '--coordinator', 'cursor',
+    '--account', spreadPath,
+    '--ledger', join(dir, 'empty.jsonl'),
+  ], { encoding: 'utf8', env: { ...process.env, ORCA_MODELS_PATH: BUNDLED_MODELS_PATH } });
+  assert.equal(heavy.status, 0, heavy.stderr);
+  assert.match(heavy.stdout, /^Next: nobody/m);
+
+  const light = spawnSync(process.execPath, [
+    cotasPath, 'next',
+    '--size', 'light',
+    '--coordinator', 'cursor',
+    '--account', spreadPath,
+    '--ledger', join(dir, 'empty.jsonl'),
+  ], { encoding: 'utf8', env: { ...process.env, ORCA_MODELS_PATH: BUNDLED_MODELS_PATH } });
+  assert.equal(light.status, 0, light.stderr);
+  assert.doesNotMatch(light.stdout, /^Next: cursor/m);
+  const next = light.stdout.match(/^Next: (\w+)/m);
+  assert.ok(next, light.stdout);
+  assert.match(light.stdout, /^Tier: light/m);
+  assert.match(light.stdout, new RegExp(`^Model: ${live.agents[next[1]].tiers.light.model}$`, 'm'));
+  assert.match(light.stdout, /^Args: /m);
+});
+
 test('next warns and omits model args when the table is missing', () => {
   const dir = mkdtempSync(join(tmpdir(), 'models-missing-'));
   const missing = join(dir, 'models.json');

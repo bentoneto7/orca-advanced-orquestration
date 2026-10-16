@@ -2,8 +2,8 @@
 # Merge it with what is already there; do not replace the whole file.
 
 [ui]
-# Scoped mode, same as the launch docs. "auto" asks for confirmation only for risky actions.
-# Do not set yolo = true or permission_mode = "bypassPermissions".
+# Interactive default when you open Grok by hand. Orca workers launch with
+# --permission-mode bypassPermissions (zero confirmations), which overrides this.
 permission_mode = "auto"
 yolo = false
 compact_mode = false
