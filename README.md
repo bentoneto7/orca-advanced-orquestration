@@ -2,10 +2,10 @@
 
 **Run six AI coding agents in parallel in [Orca](https://github.com/stablyai/orca), with real quota and rate-limit balancing and 100% autonomous sub-agents.**
 
-[![GitHub stars](https://img.shields.io/github/stars/bentoneto7/orca-advanced-orquestration?style=flat&logo=github)](https://github.com/bentoneto7/orca-advanced-orquestration/stargazers)
-[![Platforms](https://img.shields.io/badge/platforms-macOS%20%7C%20Linux%20%7C%20Windows-blue)](docs/TUTORIAL.md)
-[![Agents](https://img.shields.io/badge/agents-Claude%20Code%20%7C%20Codex%20%7C%20Cursor%20%7C%20Grok%20%7C%20Antigravity%20%7C%20Muse-7C9CFF)](docs/IDEA.md)
-[![Built for Orca](https://img.shields.io/badge/built%20for-Orca-22C55E)](https://github.com/stablyai/orca)
+[![GitHub stars](https://img.shields.io/github/stars/bentoneto7/orca-advanced-orquestration?style=flat&logo=github&color=346df2)](https://github.com/bentoneto7/orca-advanced-orquestration/stargazers)
+[![Platforms](https://img.shields.io/badge/platforms-macOS%20%7C%20Linux%20%7C%20Windows-346df2)](docs/TUTORIAL.md)
+[![Agents](https://img.shields.io/badge/agents-Claude%20Code%20%7C%20Codex%20%7C%20Cursor%20%7C%20Grok%20%7C%20Antigravity%20%7C%20Muse-346df2)](docs/IDEA.md)
+[![Built for Orca](https://img.shields.io/badge/built%20for-Orca-346df2)](https://github.com/stablyai/orca)
 
 ## What is this
 
@@ -153,6 +153,7 @@ The default team is all six. An agent leaves a run when it has no quota or when 
 - [The idea, the dynamics and why it is more efficient](docs/IDEA.md)
 - [Full tutorial, from zero to a finished setup](docs/TUTORIAL.md)
 - [The skill itself (`SKILL.md`)](skills/orca-advanced-orquestration/SKILL.md)
+- [Brand: Zuuuw Studio Aura design tokens](docs/BRAND.md)
 - [How to contribute](CONTRIBUTING.md)
 
 ## Contributing
