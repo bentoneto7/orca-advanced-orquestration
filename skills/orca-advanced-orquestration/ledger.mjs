@@ -1,6 +1,6 @@
 // Append-only usage ledger and per-task pick for /orca-advanced-orquestration.
 // Path: $ORCA_USAGE_LEDGER or ~/.orca-advanced/usage.jsonl
-// Lines are JSON objects: ai, task, size, quotaBefore, quotaAfter, optional tokens.
+// Lines are JSON objects: ai, task, size, tier, quotaBefore, quotaAfter, ok, optional tokens and model.
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -53,6 +53,9 @@ export function parseLedger(text) {
       quotaBefore,
       quotaAfter,
       ...(tokens == null ? {} : { tokens }),
+      ...(typeof row.model === 'string' && row.model ? { model: row.model } : {}),
+      ...(SIZE_CLASSES.includes(row.tier) ? { tier: row.tier } : {}),
+      ...(typeof row.ok === 'boolean' ? { ok: row.ok } : {}),
       ...(typeof row.ts === 'string' ? { ts: row.ts } : {}),
     });
   }
@@ -91,6 +94,11 @@ export function buildRecord(fields) {
   if (!KNOWN_AIS.includes(ai)) throw new Error(`record: unknown ai '${ai ?? ''}'`);
   if (!task || /[\r\n]/.test(task)) throw new Error('record: task id is required');
   if (!SIZE_CLASSES.includes(size)) throw new Error(`record: size must be ${SIZE_CLASSES.join('|')}`);
+  const tier = fields.tier || size;
+  if (!SIZE_CLASSES.includes(tier)) throw new Error(`record: tier must be ${SIZE_CLASSES.join('|')}`);
+  if (fields.model != null && fields.model !== '' && (typeof fields.model !== 'string' || /[\r\n]/.test(fields.model))) {
+    throw new Error('record: model id must be a single line');
+  }
   const quotaBefore = numberOrNull(fields.quotaBefore);
   const quotaAfter = numberOrNull(fields.quotaAfter);
   const tokens = numberOrNull(fields.tokens);
@@ -99,10 +107,13 @@ export function buildRecord(fields) {
     ai,
     task,
     size,
+    tier,
     quotaBefore,
     quotaAfter,
+    ok: fields.ok === false ? false : true,
   };
   if (tokens != null) row.tokens = tokens;
+  if (typeof fields.model === 'string' && fields.model) row.model = fields.model;
   return row;
 }
 
@@ -229,7 +240,14 @@ export function formatPick(pick) {
   const projected = pick.projected.length
     ? pick.projected.map((agent) => `${agent.name} ${round1(agent.projected)} (headroom ${round1(agent.headroom)} - cost ${round1(agent.cost)})`).join(' | ')
     : 'none';
-  return `Next: ${next}\nFallback: ${fallback}\nProjected: ${projected}`;
+  const lines = [`Next: ${next}`];
+  if (pick.route) {
+    const model = pick.route.model ?? 'cli-default';
+    const args = Array.isArray(pick.route.args) && pick.route.args.length ? pick.route.args.join(' ') : 'none';
+    lines.push(`Tier: ${pick.route.tier}`, `Model: ${model}`, `Args: ${args}`);
+  }
+  lines.push(`Fallback: ${fallback}`, `Projected: ${projected}`);
+  return lines.join('\n');
 }
 
 function round1(n) {
@@ -240,5 +258,8 @@ export function formatRecord(row) {
   const before = row.quotaBefore == null ? '?' : row.quotaBefore;
   const after = row.quotaAfter == null ? '?' : row.quotaAfter;
   const tokens = row.tokens == null ? '' : ` tokens ${row.tokens}`;
-  return `Recorded: ${row.ai} ${row.task} ${row.size} quota ${before}->${after}${tokens}`;
+  const model = row.model ? ` model ${row.model}` : '';
+  const tier = row.tier ? ` tier ${row.tier}` : '';
+  const outcome = row.ok === false ? ' failed' : '';
+  return `Recorded: ${row.ai} ${row.task} ${row.size} quota ${before}->${after}${tokens}${model}${tier}${outcome}`;
 }

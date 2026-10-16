@@ -1,0 +1,54 @@
+{
+  "note": "Editable defaults, not a lock. Model ids should match what each CLI lists today. Adding a new LLM or provider is a new entry under agents: tiers light, medium, and heavy, plus an argv template. Placeholders are {model} and {effort}.",
+  "success": { "minRate": 0.8, "minSamples": 3 },
+  "agents": {
+    "claude": {
+      "argv": ["--model", "{model}"],
+      "tiers": {
+        "light": { "model": "claude-haiku-4-5", "effort": "low", "cost": 1 },
+        "medium": { "model": "claude-sonnet-4-6", "effort": "medium", "cost": 3 },
+        "heavy": { "model": "claude-opus-4-6", "effort": "high", "cost": 8 }
+      }
+    },
+    "codex": {
+      "argv": ["-m", "{model}", "-c", "model_reasoning_effort={effort}"],
+      "tiers": {
+        "light": { "model": "gpt-5.4-mini", "effort": "low", "cost": 1 },
+        "medium": { "model": "gpt-5.4", "effort": "medium", "cost": 3 },
+        "heavy": { "model": "gpt-5.4", "effort": "high", "cost": 8 }
+      }
+    },
+    "cursor": {
+      "argv": ["--model", "{model}"],
+      "tiers": {
+        "light": { "model": "composer-2.5", "effort": "low", "cost": 1 },
+        "medium": { "model": "gpt-5.4", "effort": "medium", "cost": 3 },
+        "heavy": { "model": "claude-sonnet-4-6", "effort": "high", "cost": 6 }
+      }
+    },
+    "grok": {
+      "argv": ["--model", "{model}", "--reasoning-effort", "{effort}"],
+      "tiers": {
+        "light": { "model": "grok-4.6", "effort": "low", "cost": 1 },
+        "medium": { "model": "grok-4.6", "effort": "high", "cost": 3 },
+        "heavy": { "model": "grok-4.6", "effort": "xhigh", "cost": 6 }
+      }
+    },
+    "antigravity": {
+      "argv": ["--model", "{model}"],
+      "tiers": {
+        "light": { "model": "gemini-2.5-flash", "effort": "low", "cost": 1 },
+        "medium": { "model": "gemini-2.5-pro", "effort": "medium", "cost": 3 },
+        "heavy": { "model": "claude-sonnet-4-6", "effort": "high", "cost": 5 }
+      }
+    },
+    "muse": {
+      "argv": ["--model", "{model}"],
+      "tiers": {
+        "light": { "model": "muse", "effort": "low", "cost": 1 },
+        "medium": { "model": "muse", "effort": "medium", "cost": 2 },
+        "heavy": { "model": "muse", "effort": "high", "cost": 4 }
+      }
+    }
+  }
+}

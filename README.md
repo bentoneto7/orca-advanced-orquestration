@@ -18,6 +18,7 @@
 - [Main benefits](#main-benefits)
 - [Quick start](#quick-start)
 - [100% autonomy](#100-autonomy)
+- [Model routing](#model-routing)
 - [What it looks like in Orca](#what-it-looks-like-in-orca)
 - [FAQ](#faq)
 - [What's in here](#whats-in-here)
@@ -76,6 +77,12 @@ The installer also removes the old `orquestration` and `orquestration-avanced` s
 
 <sub>Only exception, for safety: merge to main, deploy, production, real data, migrations on a real database and secrets are left ready as a PR or command in the final report. The work never stops.</sub>
 
+## Model routing
+
+Heavy models stay off simple tasks. `config/models.json` is the only routing table: each AI (Claude, Codex, Cursor, Grok, Antigravity/Gemini, Muse) maps `light`, `medium`, and `heavy` to a model id and the CLI flags that pass it (`--model` for Claude, Cursor, Grok, Antigravity, and Muse; Codex uses `-m` plus a reasoning-effort config). The ids are defaults. Edit them when a CLI renames a model. Adding a new LLM or provider is a new entry in that file.
+
+Before each worker starts, `cotas.mjs next` classifies the task (size class, plus optional file count and the words review, debug, and architecture; `--tier` overrides) and prints the AI, the tier, the model, and ready launch args. A light or medium attempt that fails is retried one tier higher, and heavy is the top. After enough history, the picker prefers the cheapest model whose success rate for that tier is at least 80% over at least 3 samples. Otherwise it uses the tier's default model.
+
 ## What it looks like in Orca
 
 A real (cropped) screenshot of Orca running the skill, and the quota reading done before each wave, without spending tokens. More screenshots and the plan and report formats in [docs/IDEA.md](docs/IDEA.md).
@@ -124,6 +131,7 @@ The default team is all six. An agent leaves a run when it has no quota or when 
 | `config/grok-rules-orca-equipe.md` | Generated from `equipe-orca.md` for `~/.grok/rules/`. |
 | `config/cursor-rules-orca-equipe.mdc` | Generated from `equipe-orca.md` for `~/.cursor/rules/` (not `alwaysApply`). |
 | `scripts/generate-rules.mjs` | Writes the Grok and Cursor rule files from `equipe-orca.md`. |
+| `config/models.json` | Model routing table: tier to model id and CLI flags per AI. Edit it to add a provider. |
 | `config/grok-config.toml.example` | Suggested snippet for `~/.grok/config.toml`. |
 | `config/orchestration-hook.md` | The "Zuuuw team" section the script appends to Orca's skill. |
 | `scripts/instalar.sh` | Installs everything in every AI on macOS/Linux (`--verificar` or `--check` only checks). Needs python3. |

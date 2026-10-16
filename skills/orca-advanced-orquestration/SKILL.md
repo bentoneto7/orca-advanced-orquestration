@@ -28,7 +28,7 @@ Never stop to ask the user: they do not watch the workers. When in doubt, pick t
 ## 2. Credit management (real quota + healthy pacing)
 Quota reading (zero token cost), before the plan and before EVERY wave:
 - `node <this skill's folder>/cotas.mjs` -> prints the `Quotas` line (usage per window, pace, reset, status and each AI's share) and a `Suggested share` line. `--json` for details. The CLI is `$ORCA_CLI_COMMAND`, then `orca-ide`, then `orca`.
-- Per-task rebalance (the wave plan is the initial guess only). Before every `worker-start`: `node <this skill's folder>/cotas.mjs next --size <light|medium|heavy> --coordinator <claude|codex> [--taken ai=n,ai=n]`. It rereads live quota, subtracts that AI's decayed average cost for the size class (empty ledger defaults: light 1, medium 3, heavy 8 quota points), keeps the 15% claude/codex reserve and the 35% wave cap, and prints `Next` plus `Fallback`. Never pass the coordinator as the implementation agent. After every `worker_done`: `node <this skill's folder>/cotas.mjs record --ai <agent> --task <id> --size <class> [--tokens <n>] [--quota-before <pct from the next reading>]`. One JSON line is appended to `~/.orca-advanced/usage.jsonl` (`ORCA_USAGE_LEDGER` overrides the path). Quota after comes from `account list`. Tokens are optional.
+- Per-task rebalance (the wave plan is the initial guess only). Classify, then pick. Before every `worker-start`: `node <this skill's folder>/cotas.mjs next --size <light|medium|heavy> --coordinator <claude|codex> [--title "<task>"] [--files <n>] [--taken ai=n,ai=n] [--tier <class>]`. Hints only raise the tier; `--tier` is the coordinator override. It rereads live quota, subtracts that AI's decayed average cost (empty ledger defaults: light 1, medium 3, heavy 8 quota points), keeps the 15% claude/codex reserve and the 35% wave cap, and prints `Next`, `Tier`, `Model`, `Args`, and `Fallback`. Never pass the coordinator as the implementation agent. Model ids and CLI flags come from `config/models.json`. After every `worker_done`: `node <this skill's folder>/cotas.mjs record --ai <agent> --task <id> --size <class> --tier <Tier> --model <Model> [--tokens <n>] [--quota-before <pct>] [--failed]`. One JSON line is appended to `~/.orca-advanced/usage.jsonl` (`ORCA_USAGE_LEDGER` overrides the path). Quota after comes from `account list`. Tokens are optional. A finished task counts as success; `--failed` records a miss.
 - Without node: `orca account list --json` -> `result.rateLimits` (claude/codex: 5h session + weekly; cursor: monthly, bucket "Cursor Models"; grok: weekly; antigravity: buckets "Gemini Models" and "Claude and GPT models"). Antigravity also: `agy -p /usage --output-format json --print-timeout 20s`.
 - Muse has no meter. Never spend tokens to measure quota (no free-form prompt just to check).
 
@@ -49,7 +49,7 @@ Split by remaining quota: each AI's suggested share is proportional to `headroom
 - Antigravity without Gemini quota but with headroom in "Claude and GPT models": use `--model claude-sonnet-4-6` in `worker-start` (models: `agy models`). Do not use `gemini` (API only).
 - Extra or pay-per-use credits (e.g. codex `extraUsage`) do not count as headroom.
 
-Cheapest model that does the job: `worker-start --model <id> --effort <low|medium|high>`. Light task (docs, checklist, small fix) = smaller model or low effort; medium = medium; heavy or critical = default/high. In cursor, prefer "Cursor Models" (own bucket) over "Other Models".
+Model routing (`config/models.json`): `next` prints `Model` and `Args` for the tier. Pass `Args` on `worker-start` (`--model <id>` for Claude, Cursor, Grok, Antigravity, and Muse; Codex is `-m <id>` plus the printed reasoning-effort config). The ids are editable defaults. Adding a provider is a new entry in that file, not a change to this skill. If a light or medium model fails, or the worker says it could not finish, `record --failed` and run `next --retry-of <task id>`, which steps one tier up and stops at heavy. Among models with a success rate of at least 80% over at least 3 samples for that tier, `next` prefers the cheapest; otherwise it uses the tier's default model. In cursor, prefer "Cursor Models" (own bucket) over "Other Models".
 
 Rate limit mid-run: if a worker reports a quota/rate-limit error, record what you can, re-read the quotas, mark the AI as excluded until the reset and reassign the task right away (`worker-start --retry-of`) to the agent `cotas.mjs next` prints, without asking the user.
 
@@ -98,12 +98,13 @@ Coverage: claude T9 | codex T4,T8 | antigravity T1 | grok T2,T6 | cursor T5,T7 |
 - Per wave, do not give one AI more than about 35% of the tasks when at least 3 AIs have quota. With fewer, the cap is lifted.
 - The coordinator does not take implementation tasks. The agent on each plan line is the initial guess. At dispatch, `next` picks the worker.
 - Heavy tasks go to the `Heavy` AI only when `next` agrees, or to the next name on the `Fallback` line.
-- Each task: ID, agent, title, deliverable, `deps` when needed, `[expandable]` if it may open sub-agents, and `--model/--effort` when it is light.
+- Each task: ID, agent, title, deliverable, `deps` when needed, `[expandable]` if it may open sub-agents, and a size class (`light`, `medium`, or `heavy`). `next` fills in the model at dispatch.
 - Board: `orca orchestration task-create --spec "<spec>" --task-title "<ID> <title>" --display-name "<agent> - <ID> <title>" [--deps '["<id>"]'] [--parent <id>] --json`.
 
 ## 5. Parallel dispatch
-- Dispatch the ready tasks of the wave together. Before each `worker-start`, run `cotas.mjs next --size <class> --coordinator <you> --taken <ai=n,... already started this wave>`. Use that `Next` agent, not the name in the initial plan when they differ: `orca orchestration worker-start --task <id> --agent <Next> [--model <id> --effort <level>] --worktree new-child --name <slug> --json`.
-- After each `worker_done`, run `cotas.mjs record --ai <agent> --task <id> --size <class> [--tokens <n if the worker reported them>] [--quota-before <pct>]`.
+- Dispatch the ready tasks of the wave together. Before each `worker-start`, run `cotas.mjs next --size <class> --coordinator <you> [--title "<task title>"] [--files <n>] --taken <ai=n,... already started this wave>`. Use `Next`, and pass the printed `Args` (model id and effort) on the launch: `orca orchestration worker-start --task <id> --agent <Next> <Args> --worktree new-child --name <slug> --json`.
+- If the worker could not finish on a light or medium model, `record --failed` and run `next --retry-of <task id>` (one tier up, max heavy), then `worker-start --retry-of <task id>` with the new `Args`.
+- After each `worker_done`, run `cotas.mjs record --ai <agent> --task <id> --size <class> --tier <Tier> --model <Model> [--tokens <n>] [--quota-before <pct>] [--failed]`.
 - Read-only tasks may use `--worktree current`.
 - Up to 6 workers at the same time; 4 if claude and codex are both >= 80%.
 - `--deps` only when the task needs another task's result.
@@ -136,7 +137,7 @@ Depth in Settings > Orchestration > Nested worker depth.
 Summary: executed plan (Quotas and Coverage), what each AI did, which version won and why, tests, decisions taken alone, "Pending approval" (with a ready command or PR) and the Credits block: usage per agent at the start and at the end (run `cotas.mjs` again), who was excluded and until when, reassignments due to rate limits and next resets.
 
 ## 11. When you are a worker
-- Reply through the same channel (reply / worker_done) in up to 15 lines. If the tool reports a token count, add `tokens <n>` on its own so the coordinator can pass `--tokens` to `record`.
+- Reply through the same channel (reply / worker_done) in up to 15 lines. If the tool reports a token count, add `tokens <n>` on its own so the coordinator can pass `--tokens` to `record`. If you could not finish, say `could not finish` and the tier you used so the coordinator can `record --failed` and retry one tier up.
 - Work only in your worktree. Sub-agents only with `[expandable]` (section 6).
 - Obey the coordinator 100%; never ask the user. Scope doubt: `orca orchestration ask`; with no answer, take the safest option and move on.
 - Quota or rate-limit error: stop and immediately report `NO QUOTA until <reset>` to the coordinator, so it can reassign.
